@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FindMine</title>
+</head>
+<body>
+  <h2>FindMine</h2>
+  <video id="v" autoplay playsinline muted style="width:100%"></video>
+  <p id="msg">Starting camera...</p>
+  <script>
+    navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" }
+    }).then(function (s) {
+      document.getElementById("v").srcObject = s;
+      document.getElementById("msg").textContent = "Camera works!";
+    }).catch(function (e) {
+      document.getElementById("msg").textContent = "Camera error: " + e;
+    });
+  </script>
+</body>
+</html>
