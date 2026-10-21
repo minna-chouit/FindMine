@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FindMine · Guidance</title>
+<style>
+  :root { --bg:#ffffff; --fg:#0d1b2a; --muted:#4a5a6a; --btn:#1446a0; --btn-fg:#ffffff; --stop:#b3261e; --line:#c9d3dd; color-scheme:light; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#05080d; --fg:#f2f5f8; --muted:#a9b6c3; --btn:#5b8cff; --btn-fg:#05080d; --stop:#ff6b60; --line:#2a3644; color-scheme:dark; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:18px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+         padding:calc(env(safe-area-inset-top,0px) + 12px) 14px calc(env(safe-area-inset-bottom,0px) + 16px); }
+  main { max-width:640px; margin:0 auto; }
+  h1 { font-size:1.6rem; margin:4px 0 12px; }
+  label { display:block; font-weight:600; margin-bottom:6px; }
+  select { width:100%; font-size:1.2rem; padding:12px; border:2px solid var(--line); border-radius:12px; background:var(--bg); color:var(--fg); }
+  #go { width:100%; min-height:72px; margin-top:12px; font-size:1.4rem; font-weight:700; border:0; border-radius:14px;
+        background:var(--btn); color:var(--btn-fg); cursor:pointer; }
+  #go.on { background:var(--stop); }
+  button:focus-visible, select:focus-visible { outline:4px solid #ffd400; outline-offset:3px; }
+  #direction { font-size:2.2rem; font-weight:800; text-align:center; min-height:1.4em; margin:12px 0 4px; }
+  #status { color:var(--muted); min-height:1.4em; text-align:center; margin:0 0 10px; }
+  #stage { position:relative; }
+  video, canvas { display:block; width:100%; border-radius:10px; }
+  canvas { position:absolute; inset:0; height:100%; pointer-events:none; }
+  .toggles { display:flex; flex-wrap:wrap; gap:14px; margin-top:12px; }
+  .toggles label { display:flex; align-items:center; gap:8px; font-weight:400; }
+  .toggles input { width:22px; height:22px; }
+  a { color:var(--btn); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Guidance</h1>
+
+  <label for="target">What are you looking for?</label>
+  <select id="target">
+    <option value="cup">cup</option>
+    <option value="bottle">bottle</option>
+    <option value="cell phone">phone</option>
+    <option value="remote">remote</option>
+    <option value="book">book</option>
+    <option value="scissors">scissors</option>
+    <option value="mouse">mouse</option>
+    <option value="backpack">backpack</option>
+    <option value="handbag">handbag</option>
+    <option value="laptop">laptop</option>
+  </select>
+
+  <button id="go">Start guiding</button>
+
+  <p id="direction" aria-live="off"></p>
+  <p id="status" role="status" aria-live="polite">Wear headphones for left/right beeps.</p>
+
+  <div id="stage">
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="overlay"></canvas>
+  </div>
+
+  <div class="toggles">
+    <label><input type="checkbox" id="optSpeech" checked> Speech</label>
+    <label><input type="checkbox" id="optBeeps" checked> Beeps</label>
+    <label><input type="checkbox" id="optVibrate" checked> Vibration</label>
+  </div>
+  <p><a href="./settings.html">Language and talk settings</a> · <a href="./">Camera page</a></p>
+</main>
+
+<script src="prompts.js"></script>
+<script>
+  const SERVER = "wss://54-90-98-230.sslip.io/ws";
+  const FPS = 5, WIDTH = 640, QUALITY = 0.7;
+  const MIN_CONF = 0.35;
+  const FOV_DEG = 65;           // phone camera horizontal view, roughly
+  const CENTER = 0.12;          // within ±12% of the middle = "ahead"
+  const NEAR_AREA = 0.12;       // box covers >12% of the picture = near
+  const MID_AREA = 0.03;        // >3% = about one meter
+  const SPEAK_EVERY_MS = 2500;
+  const LOST_AFTER_MS = 2000;
+
+  const $ = (id) => document.getElementById(id);
+  const video = $("video"), overlay = $("overlay"), ctx = overlay.getContext("2d");
+  const grab = document.createElement("canvas"), gctx = grab.getContext("2d");
+
+  let ws = null, running = false, waiting = false, sentAt = 0, timer = null;
+  let lastSeen = 0, everSeen = false, lostSaid = false, lastSpoke = 0, lastZone = "", stopSaid = false, lastVibe = 0, lastScanHint = 0;
+
+  // ---------- Stereo beeps ----------
+  let audio = null, beepTimer = null;
+  const beep = { on: false, pan: 0, gapMs: 900, freq: 600 };
+
+  function startAudio() {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    if (audio.state === "suspended") audio.resume();
+    loopBeeps();
+  }
+  function playBeep() {
+    const osc = audio.createOscillator(), gain = audio.createGain();
+    const pan = audio.createStereoPanner ? audio.createStereoPanner() : null;
+    osc.frequency.value = beep.freq;
+    osc.type = "sine";
+    const t = audio.currentTime;
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.4, t + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+    osc.connect(gain);
+    if (pan) { pan.pan.value = beep.pan; gain.connect(pan); pan.connect(audio.destination); }
+    else gain.connect(audio.destination);
+    osc.start(t); osc.stop(t + 0.1);
+  }
+  function loopBeeps() {
+    clearTimeout(beepTimer);
+    if (!running) return;
+    if (beep.on && $("optBeeps").checked) playBeep();
+    beepTimer = setTimeout(loopBeeps, beep.on ? beep.gapMs : 200);
+  }
+
+  // ---------- Guidance logic ----------
+  function itemName() { return $("target").selectedOptions[0].textContent; }
+
+  function guide(target, W, H) {
+    const now = performance.now();
+    if (!target) {
+      if (now - lastSeen > 600) beep.on = false;
+      if (everSeen && now - lastSeen > LOST_AFTER_MS && !lostSaid) {
+        lostSaid = true;
+        $("direction").textContent = "…";
+        speak("lost_track", {}, true);
+      } else if (!everSeen && now - lastScanHint > 7000) {
+        lastScanHint = now;
+        $("direction").textContent = "Scanning…";
+        speak("scan_slowly");
+      }
+      return;
+    }
+
+    everSeen = true; lostSaid = false; lastSeen = now;
+    const [x, y, w, h] = target.box;
+    const offset = (x + w / 2) / W - 0.5;               // -0.5 (far left) … +0.5 (far right)
+    const area = (w * h) / (W * H);
+    const band = area > NEAR_AREA ? "near" : area > MID_AREA ? "mid" : "far";
+    const zone = offset < -CENTER ? "left" : offset > CENTER ? "right" : "ahead";
+
+    // Clock: 12 = straight ahead, each hour = 30°
+    const hour = zone === "ahead" ? 0 : Math.round((offset * FOV_DEG) / 30) || (offset < 0 ? -1 : 1);
+    const clock = hour <= 0 ? 12 + hour : hour;
+
+    // Beeps: ear = direction, speed = distance, pitch = centred
+    beep.on = true;
+    beep.pan = Math.max(-1, Math.min(1, offset * 2));
+    beep.gapMs = band === "near" ? 180 : band === "mid" ? 450 : 850;
+    beep.freq = zone === "ahead" ? 900 : 600;
+
+    $("direction").textContent = clock + " o’clock · " + (band === "near" ? "close" : band === "mid" ? "≈1 m" : "far");
+
+    // Vibration when close and centred
+    const onTarget = zone === "ahead" && band === "near";
+    if (onTarget && $("optVibrate").checked && navigator.vibrate && now - lastVibe > 1000) {
+      lastVibe = now;
+      navigator.vibrate([80, 60, 80]);
+    }
+
+    // Speech
+    if (onTarget) {
+      if (!stopSaid) { stopSaid = true; speak("stop", {}, true); lastSpoke = now; }
+      return;
+    }
+    stopSaid = false;
+    if (zone !== lastZone || now - lastSpoke > SPEAK_EVERY_MS) {
+      lastZone = zone; lastSpoke = now;
+      if (FM.verbosity === "short") speak(zone);
+      else speak("at_clock", { item: itemName(), clock, dist: "dist_" + band });
+    }
+  }
+
+  function speak(key, params = {}, urgent = false) {
+    if (!$("optSpeech").checked) return;
+    if (!urgent && "speechSynthesis" in window && speechSynthesis.speaking) return;
+    FM.say(key, params, { interrupt: urgent });
+  }
+
+  // ---------- Camera + server ----------
+  async function start() {
+    try {
+      video.srcObject = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+      await video.play();
+    } catch (e) {
+      $("status").textContent = "Camera blocked: " + e.message;
+      FM.say("camera_blocked");
+      return;
+    }
+    running = true;
+    everSeen = false; lostSaid = false; stopSaid = false; lastZone = ""; lastScanHint = 0; lastSeen = 0;
+    $("go").textContent = "Stop"; $("go").classList.add("on");
+    startAudio();
+    FM.say("searching", { item: itemName() }, { interrupt: true });
+    connect();
+    timer = setInterval(sendFrame, 1000 / FPS);
+  }
+
+  function stop() {
+    running = false;
+    clearInterval(timer); clearTimeout(beepTimer);
+    beep.on = false;
+    if (ws) ws.close();
+    if (video.srcObject) video.srcObject.getTracks().forEach((t) => t.stop());
+    video.srcObject = null;
+    ctx.clearRect(0, 0, overlay.width, overlay.height);
+    if ("speechSynthesis" in window) speechSynthesis.cancel();
+    $("go").textContent = "Start guiding"; $("go").classList.remove("on");
+    $("direction").textContent = "";
+    $("status").textContent = "Stopped.";
+  }
+
+  function connect() {
+    ws = new WebSocket(SERVER);
+    ws.onopen = () => { waiting = false; $("status").textContent = "Connected. Move the phone slowly."; };
+    ws.onclose = () => {
+      if (!running) return;
+      $("status").textContent = "Connection lost. Trying again…";
+      setTimeout(() => { if (running) connect(); }, 1500);
+    };
+    ws.onmessage = (e) => {
+      waiting = false;
+      const data = JSON.parse(e.data);
+      if (data.error) return;
+      const want = $("target").value;
+      const target = data.detections
+        .filter((d) => d.label === want && d.conf >= MIN_CONF)
+        .sort((a, b) => b.conf - a.conf)[0];
+      draw(data, target);
+      guide(target, data.w, data.h);
+    };
+  }
+
+  function sendFrame() {
+    if (!running || !ws || ws.readyState !== 1 || !video.videoWidth) return;
+    if (waiting && performance.now() - sentAt < 3000) return;
+    waiting = true;
+    const h = Math.round(video.videoHeight * WIDTH / video.videoWidth);
+    grab.width = WIDTH; grab.height = h;
+    gctx.drawImage(video, 0, 0, WIDTH, h);
+    grab.toBlob((blob) => {
+      if (!blob || ws.readyState !== 1) { waiting = false; return; }
+      sentAt = performance.now();
+      ws.send(blob);
+    }, "image/jpeg", QUALITY);
+  }
+
+  function draw(data, target) {
+    overlay.width = data.w; overlay.height = data.h;
+    ctx.clearRect(0, 0, data.w, data.h);
+    ctx.fillStyle = "rgba(255,212,0,0.14)";            // the "straight ahead" zone
+    ctx.fillRect(data.w * (0.5 - CENTER), 0, data.w * CENTER * 2, data.h);
+    if (!target) return;
+    const [x, y, w, h] = target.box;
+    ctx.lineWidth = Math.max(4, data.w / 120);
+    ctx.strokeStyle = "#ffd400";
+    ctx.strokeRect(x, y, w, h);
+  }
+
+  $("go").addEventListener("click", () => running ? stop() : start());
+</script>
+</body>
+</html>
