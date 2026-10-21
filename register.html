@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FindMine · Register an item</title>
+<style>
+  :root { --bg:#ffffff; --fg:#0d1b2a; --muted:#4a5a6a; --btn:#1446a0; --btn-fg:#ffffff; --ok:#1b7f3a; --line:#c9d3dd; color-scheme:light; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#05080d; --fg:#f2f5f8; --muted:#a9b6c3; --btn:#5b8cff; --btn-fg:#05080d; --ok:#4cd07d; --line:#2a3644; color-scheme:dark; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:18px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+         padding:calc(env(safe-area-inset-top,0px) + 12px) 14px calc(env(safe-area-inset-bottom,0px) + 16px); }
+  main { max-width:640px; margin:0 auto; }
+  h1 { font-size:1.6rem; margin:4px 0 12px; }
+  label { display:block; font-size:1.1rem; font-weight:600; margin-bottom:6px; }
+  input[type=text] { width:100%; font-size:1.3rem; padding:14px; border:2px solid var(--line); border-radius:12px;
+                     background:var(--bg); color:var(--fg); }
+  button { width:100%; min-height:72px; font-size:1.4rem; font-weight:700; border:0; border-radius:14px;
+           background:var(--btn); color:var(--btn-fg); cursor:pointer; margin-top:14px; }
+  button:disabled { opacity:.5; }
+  button:focus-visible, input:focus-visible { outline:4px solid #ffd400; outline-offset:3px; }
+  #prompt { font-size:1.35rem; font-weight:700; margin:14px 0 6px; }
+  #status { font-size:1.1rem; min-height:1.5em; color:var(--muted); margin:6px 0 12px; }
+  video { display:block; width:100%; border-radius:10px; background:#000; }
+  #thumbs { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-top:12px; }
+  #thumbs div { aspect-ratio:1; border:2px dashed var(--line); border-radius:8px; overflow:hidden; }
+  #thumbs div.done { border:2px solid var(--ok); }
+  #thumbs img { width:100%; height:100%; object-fit:cover; display:block; }
+  .hidden { display:none; }
+  a { color:var(--btn); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Register an item</h1>
+
+  <section id="step-name">
+    <label for="name">What is the item?</label>
+    <input type="text" id="name" placeholder="my keys" autocomplete="off">
+    <button id="begin">Start</button>
+  </section>
+
+  <section id="step-photos" class="hidden">
+    <p id="prompt" aria-live="assertive"></p>
+    <video id="video" autoplay playsinline muted></video>
+    <button id="shoot">Take photo</button>
+    <div id="thumbs"></div>
+  </section>
+
+  <section id="step-done" class="hidden">
+    <button id="again">Register another item</button>
+  </section>
+
+  <p id="status" role="status" aria-live="polite"></p>
+  <p><a href="./">Back to the camera page</a></p>
+</main>
+
+<script>
+  const SERVER = "https://54-90-98-230.sslip.io";
+  const MAX_WIDTH = 1024;   // bigger than the live camera: more detail for matching
+  const QUALITY = 0.9;
+  const SHOTS = [
+    "the front",
+    "the back",
+    "the left side",
+    "the right side",
+    "from above, close up",
+  ];
+
+  const $ = (id) => document.getElementById(id);
+  const video = $("video");
+  const grab = document.createElement("canvas");
+  let itemId = null, itemName = "", shot = 0, busy = false;
+
+  function setStatus(t) { $("status").textContent = t; }
+  function say(text) {
+    if (!("speechSynthesis" in window)) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "en-US";
+    speechSynthesis.speak(u);
+  }
+  function show(id) {
+    for (const s of ["step-name", "step-photos", "step-done"]) $(s).classList.toggle("hidden", s !== id);
+  }
+
+  function buildThumbs() {
+    $("thumbs").innerHTML = "";
+    for (let i = 0; i < SHOTS.length; i++) {
+      const d = document.createElement("div");
+      d.setAttribute("aria-label", "Photo " + (i + 1) + " not taken yet");
+      $("thumbs").appendChild(d);
+    }
+  }
+
+  function askForShot() {
+    const text = "Photo " + (shot + 1) + " of " + SHOTS.length + ": " + SHOTS[shot] +
+                 ". Hold the item close so it fills the screen.";
+    $("prompt").textContent = text;
+    say(text);
+  }
+
+  async function begin() {
+    itemName = $("name").value.trim();
+    if (!itemName) { setStatus("Type the item name first."); say("Type the item name first."); $("name").focus(); return; }
+    $("begin").disabled = true;
+    setStatus("Creating the item...");
+    try {
+      const form = new FormData();
+      form.append("name", itemName);
+      const r = await fetch(SERVER + "/items", { method: "POST", body: form });
+      if (!r.ok) throw new Error("server answered " + r.status);
+      itemId = (await r.json()).item_id;
+    } catch (e) {
+      setStatus("Could not reach the server: " + e.message + ". Check it is running, then try again.");
+      $("begin").disabled = false;
+      return;
+    }
+    try {
+      video.srcObject = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+      await video.play();
+    } catch (e) {
+      setStatus("Camera blocked: " + e.message + ". Allow the camera in your browser settings.");
+      $("begin").disabled = false;
+      return;
+    }
+    shot = 0;
+    buildThumbs();
+    show("step-photos");
+    setStatus("");
+    askForShot();
+  }
+
+  function capture() {
+    const scale = Math.min(1, MAX_WIDTH / video.videoWidth);
+    grab.width = Math.round(video.videoWidth * scale);
+    grab.height = Math.round(video.videoHeight * scale);
+    grab.getContext("2d").drawImage(video, 0, 0, grab.width, grab.height);
+    return new Promise((res) => grab.toBlob(res, "image/jpeg", QUALITY));
+  }
+
+  async function shoot() {
+    if (busy || !video.videoWidth) return;
+    busy = true;
+    $("shoot").disabled = true;
+    $("shoot").textContent = "Saving...";
+    try {
+      const blob = await capture();
+      const form = new FormData();
+      form.append("photo", blob, "photo.jpg");
+      const r = await fetch(SERVER + "/items/" + itemId + "/photos", { method: "POST", body: form });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.detail || ("server answered " + r.status));
+
+      if (!data.ok) {
+        setStatus(data.message + " (" + data.points + " detail points)");
+        say(data.message);
+      } else {
+        const cell = $("thumbs").children[shot];
+        cell.classList.add("done");
+        cell.setAttribute("aria-label", "Photo " + (shot + 1) + " saved");
+        const img = document.createElement("img");
+        img.src = URL.createObjectURL(blob);
+        img.alt = "";
+        cell.appendChild(img);
+        shot++;
+        if (data.done) return finish();
+        setStatus("Photo saved.");
+        askForShot();
+      }
+    } catch (e) {
+      setStatus("Photo not saved: " + e.message + ". Tap Take photo to try again.");
+      say("Photo not saved. Try again.");
+    } finally {
+      busy = false;
+      $("shoot").disabled = false;
+      $("shoot").textContent = "Take photo";
+    }
+  }
+
+  function finish() {
+    if (video.srcObject) video.srcObject.getTracks().forEach((t) => t.stop());
+    video.srcObject = null;
+    const text = itemName + " is saved with " + SHOTS.length + " photos.";
+    $("prompt").textContent = text;
+    setStatus(text);
+    say(text);
+    show("step-done");
+  }
+
+  $("begin").addEventListener("click", begin);
+  $("shoot").addEventListener("click", shoot);
+  $("again").addEventListener("click", () => {
+    $("name").value = "";
+    $("begin").disabled = false;
+    setStatus("");
+    show("step-name");
+    $("name").focus();
+  });
+  $("name").addEventListener("keydown", (e) => { if (e.key === "Enter") begin(); });
+</script>
+</body>
+</html>
