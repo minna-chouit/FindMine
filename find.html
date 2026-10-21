@@ -126,11 +126,22 @@
     return best;
   }
 
+  function pickVoice(code) {
+    const voices = speechSynthesis.getVoices();
+    const base = code.slice(0, 2);
+    return voices.find((v) => v.lang.replace("_", "-") === code) ||
+           voices.find((v) => v.lang.toLowerCase().startsWith(base)) || null;
+  }
+  if ("speechSynthesis" in window) speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
+
   function say(text) {
     if (!("speechSynthesis" in window)) return;
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = LANGS[lang].tts;
+    const v = pickVoice(LANGS[lang].tts);
+    if (v) u.voice = v;
+    else if (lang !== "en") $("heard").textContent += "  (No " + (lang === "ar" ? "Arabic" : "French") + " voice on this phone: install it in Settings → Text-to-speech.)";
     speechSynthesis.speak(u);
   }
   function answer(text) { $("answer").textContent = text; say(text); }
@@ -182,7 +193,14 @@
     rec.maxAlternatives = 3;
     rec.onstart = () => { listening = true; $("mic").classList.add("on"); $("mic").textContent = LANGS[lang].listening; };
     rec.onend = () => { listening = false; $("mic").classList.remove("on"); $("mic").textContent = LANGS[lang].mic; };
-    rec.onerror = (e) => { $("heard").textContent = "Mic error: " + e.error; };
+    rec.onerror = (e) => {
+      if (e.error === "language-not-supported" && rec.lang === "ar-DZ") {
+        LANGS.ar.rec = "ar-SA";
+        $("heard").textContent = "Algerian Arabic not supported here, switched to standard Arabic. Tap the mic again.";
+        return;
+      }
+      $("heard").textContent = "Mic error: " + e.error;
+    };
     rec.onresult = (e) => {
       const alts = Array.from(e.results[0]).map((a) => a.transcript);
       const hit = alts.find((t) => match(t)) || alts[0];
