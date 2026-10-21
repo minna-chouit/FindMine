@@ -42,7 +42,10 @@ The first script also downloads 50 COCO val images to `data/coco/val50/`, and th
 ```
 
 - `GET /health` returns the OpenCV version and the model name.
-- `WS /ws` takes one JPEG per binary message and replies with `{"w", "h", "detections": [{"label", "conf", "box": [x1, y1, x2, y2]}]}`.
+- `WS /ws` takes one JPEG per binary message (640 px wide is enough) and replies with one JSON message per frame:
+  - usable frame: `{"quality", "w", "h", "detections": [{"label", "conf", "box": [x1, y1, x2, y2]}]}`, with boxes in pixels of the frame you sent
+  - bad frame (camera coach): `{"quality": {"issue": "blur|dark|bright|shake|blocked", ...}, "fix": {"en", "fr", "ar"}}`, with no detection
+  - not a JPEG: `{"error": "..."}`
 - `FINDMINE_MODEL` sets the ONNX path (default `models/yolo11n.onnx`; the class names come from the `.json` file next to it).
 
 Licences: Ultralytics YOLO is AGPL-3.0. DINOv2 is Apache-2.0.
