@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FindMine · Find my item</title>
+<style>
+  :root { --bg:#ffffff; --fg:#0d1b2a; --muted:#4a5a6a; --btn:#1446a0; --btn-fg:#ffffff; --line:#c9d3dd; --on:#b3261e; color-scheme:light; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#05080d; --fg:#f2f5f8; --muted:#a9b6c3; --btn:#5b8cff; --btn-fg:#05080d; --line:#2a3644; --on:#ff6b60; color-scheme:dark; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:18px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+         padding:calc(env(safe-area-inset-top,0px) + 12px) 14px calc(env(safe-area-inset-bottom,0px) + 16px); }
+  main { max-width:640px; margin:0 auto; }
+  h1 { font-size:1.6rem; margin:4px 0 12px; }
+  .langs { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .langs button { min-height:56px; font-size:1.15rem; font-weight:700; border:2px solid var(--line); border-radius:12px;
+                  background:var(--bg); color:var(--fg); cursor:pointer; }
+  .langs button[aria-pressed="true"] { background:var(--btn); color:var(--btn-fg); border-color:var(--btn); }
+  #mic { display:block; width:100%; min-height:160px; margin:18px 0 10px; font-size:1.6rem; font-weight:800;
+         border:0; border-radius:24px; background:var(--btn); color:var(--btn-fg); cursor:pointer; }
+  #mic.on { background:var(--on); }
+  button:focus-visible, input:focus-visible { outline:4px solid #ffd400; outline-offset:3px; }
+  #heard { font-size:1.1rem; color:var(--muted); min-height:1.5em; }
+  #answer { font-size:1.4rem; font-weight:700; min-height:1.5em; margin:8px 0 16px; }
+  .typed { display:flex; gap:8px; }
+  .typed input { flex:1; font-size:1.1rem; padding:12px; border:2px solid var(--line); border-radius:12px; background:var(--bg); color:var(--fg); }
+  .typed button { min-width:90px; font-size:1.05rem; font-weight:700; border:0; border-radius:12px; background:var(--btn); color:var(--btn-fg); }
+  #items { color:var(--muted); font-size:1rem; }
+  a { color:var(--btn); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Find my item</h1>
+
+  <div class="langs" role="group" aria-label="Language">
+    <button data-lang="en" aria-pressed="true">English</button>
+    <button data-lang="fr" aria-pressed="false">Français</button>
+    <button data-lang="ar" aria-pressed="false" lang="ar">العربية</button>
+  </div>
+
+  <button id="mic">🎤 Tap and speak</button>
+  <p id="heard" aria-live="polite"></p>
+  <p id="answer" role="status" aria-live="assertive"></p>
+
+  <div class="typed">
+    <input id="typed" type="text" placeholder="or type: find my keys" aria-label="Type a command">
+    <button id="go">Go</button>
+  </div>
+
+  <p id="items">Loading your items…</p>
+  <p><a href="./register.html">Register a new item</a> · <a href="./">Camera page</a></p>
+</main>
+
+<script>
+  const SERVER = "https://54-90-98-230.sslip.io";
+
+  const LANGS = {
+    en: { rec: "en-US", tts: "en-US", mic: "🎤 Tap and speak", listening: "Listening…",
+          example: "Say: find my keys",
+          searching: (n) => "Searching for " + n + ".",
+          unknown: "I don’t know that item. Your items are: ",
+          none: "You have no registered items yet.",
+          heard: "I heard: ", noMic: "Voice isn’t supported here. Type your command below." },
+    fr: { rec: "fr-FR", tts: "fr-FR", mic: "🎤 Touchez et parlez", listening: "J’écoute…",
+          example: "Dites : trouve mes clés",
+          searching: (n) => "Je cherche " + n + ".",
+          unknown: "Je ne connais pas cet objet. Vos objets sont : ",
+          none: "Vous n’avez encore aucun objet enregistré.",
+          heard: "J’ai entendu : ", noMic: "La voix n’est pas disponible ici. Écrivez votre commande." },
+    ar: { rec: "ar-DZ", tts: "ar-SA", mic: "🎤 اضغط وتكلم", listening: "أنا أستمع…",
+          example: "قل: وين المفاتيح",
+          searching: (n) => "أبحث عن " + n + ".",
+          unknown: "لا أعرف هذا الشيء. أشياؤك هي: ",
+          none: "ليس لديك أشياء مسجلة بعد.",
+          heard: "سمعت: ", noMic: "الصوت غير متوفر هنا. اكتب طلبك." },
+  };
+
+  // Same object in different languages -> one key. Add more as you register items.
+  const SYNONYMS = {
+    keys:    ["key", "keys", "cle", "cles", "clef", "clefs", "مفتاح", "مفاتيح", "المفاتيح", "ساروت", "سوارت", "السوارت"],
+    wallet:  ["wallet", "purse", "portefeuille", "porte-monnaie", "محفظة", "المحفظة", "بزطام", "البزطام"],
+    phone:   ["phone", "telephone", "portable", "mobile", "هاتف", "الهاتف", "تيليفون", "التيليفون", "بورطابل"],
+    glasses: ["glasses", "lunettes", "نظارات", "النظارات", "مناظر", "المناظر"],
+    remote:  ["remote", "telecommande", "تيليكوموند", "التيليكوموند", "ريموت"],
+    bag:     ["bag", "sac", "حقيبة", "الحقيبة", "صاك", "الصاك"],
+    watch:   ["watch", "montre", "ساعة", "الساعة", "مونطرا"],
+    earbuds: ["earbuds", "earphones", "ecouteurs", "airpods", "سماعات", "السماعات", "كيتمان"],
+  };
+
+  // Words that only mean "find / where / my" and carry no item meaning
+  const FILLER = new Set(["find","my","where","is","are","the","a","search","for","look","locate","please",
+    "trouve","trouver","cherche","chercher","mes","mon","ma","ou","est","sont","les","le","la","l","s","il","te","plait","stp",
+    "وين","فين","أين","اين","ابحث","عن","لقيلي","جيبلي","قلب","على","راه","راهم","هو","هي"]);
+
+  let lang = "en";
+  let items = [];
+  const $ = (id) => document.getElementById(id);
+
+  function norm(s) {
+    return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")   // remove French accents
+            .replace(/[\u064B-\u0652]/g, "")                                  // remove Arabic short vowels
+            .replace(/[أإآ]/g, "ا").replace(/[’'.,!?؟،]/g, " ").trim();
+  }
+  function words(s) { return norm(s).split(/\s+/).filter((w) => w && !FILLER.has(w)); }
+  function concepts(ws) {
+    const out = new Set(ws);
+    for (const [key, list] of Object.entries(SYNONYMS)) {
+      const normList = list.map(norm);
+      if (ws.some((w) => normList.includes(w))) out.add("#" + key);
+    }
+    return out;
+  }
+
+  function match(text) {
+    const said = concepts(words(text));
+    let best = null, bestScore = 0;
+    for (const it of items) {
+      const mine = concepts(words(it.name));
+      let score = 0;
+      for (const c of mine) if (said.has(c)) score += c.startsWith("#") ? 2 : 1;
+      if (score > bestScore) { best = it; bestScore = score; }
+    }
+    return best;
+  }
+
+  function say(text) {
+    if (!("speechSynthesis" in window)) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = LANGS[lang].tts;
+    speechSynthesis.speak(u);
+  }
+  function answer(text) { $("answer").textContent = text; say(text); }
+
+  function handle(text) {
+    const L = LANGS[lang];
+    $("heard").textContent = L.heard + "“" + text + "”";
+    if (!items.length) return answer(L.none);
+    const it = match(text);
+    if (!it) return answer(L.unknown + items.map((i) => i.name).join(", ") + ".");
+    try { localStorage.setItem("findmine-target", JSON.stringify(it)); } catch (e) {}
+    answer(L.searching(it.name));
+    // Day 8: hand over to the camera search here, e.g. location.href = "./?find=" + it.item_id;
+  }
+
+  async function loadItems() {
+    try {
+      const r = await fetch(SERVER + "/items");
+      items = await r.json();
+      $("items").textContent = items.length
+        ? "Your items: " + items.map((i) => i.name).join(", ")
+        : "No items yet. Register one first.";
+    } catch (e) {
+      $("items").textContent = "Couldn’t reach the server. Check it’s running, then reload.";
+    }
+  }
+
+  // Language buttons
+  function setLang(l) {
+    lang = l;
+    document.querySelectorAll("[data-lang]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === l)));
+    document.documentElement.lang = l;
+    document.documentElement.dir = l === "ar" ? "rtl" : "ltr";
+    $("mic").textContent = LANGS[l].mic;
+    $("answer").textContent = LANGS[l].example;
+  }
+  document.querySelectorAll("[data-lang]").forEach((b) => b.addEventListener("click", () => setLang(b.dataset.lang)));
+
+  // Speech recognition
+  const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let rec = null, listening = false;
+  $("mic").addEventListener("click", () => {
+    if (!Rec) { answer(LANGS[lang].noMic); $("typed").focus(); return; }
+    if (listening) { rec.stop(); return; }
+    speechSynthesis.cancel();
+    rec = new Rec();
+    rec.lang = LANGS[lang].rec;
+    rec.interimResults = false;
+    rec.maxAlternatives = 3;
+    rec.onstart = () => { listening = true; $("mic").classList.add("on"); $("mic").textContent = LANGS[lang].listening; };
+    rec.onend = () => { listening = false; $("mic").classList.remove("on"); $("mic").textContent = LANGS[lang].mic; };
+    rec.onerror = (e) => { $("heard").textContent = "Mic error: " + e.error; };
+    rec.onresult = (e) => {
+      const alts = Array.from(e.results[0]).map((a) => a.transcript);
+      const hit = alts.find((t) => match(t)) || alts[0];
+      handle(hit);
+    };
+    rec.start();
+  });
+
+  // Typed fallback
+  $("go").addEventListener("click", () => { const t = $("typed").value.trim(); if (t) handle(t); });
+  $("typed").addEventListener("keydown", (e) => { if (e.key === "Enter") $("go").click(); });
+
+  setLang("en");
+  loadItems();
+</script>
+</body>
+</html>
