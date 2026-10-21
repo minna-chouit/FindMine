@@ -11,6 +11,7 @@ import cv2 as cv
 import numpy as np
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
+from pipeline.coach import FIX, Coach
 from pipeline.detect import Detector
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -32,15 +33,21 @@ def health():
 @app.websocket("/ws")
 async def frames(sock: WebSocket):
     await sock.accept()
+    coach = Coach()
     try:
         while True:
             img = cv.imdecode(np.frombuffer(await sock.receive_bytes(), np.uint8), cv.IMREAD_COLOR)
             if img is None:
                 await sock.send_json({"error": "not a JPEG frame"})
                 continue
+            q = coach(img)
+            if q["issue"]:  # bad frame: speak the fix, skip detection
+                await sock.send_json({"quality": q, "fix": FIX[q["issue"]]})
+                continue
             # ponytail: detection blocks the event loop (~65 ms); fine for one phone, move to a worker thread with its own Net per client if we serve several
             dets = detector(img)
             await sock.send_json({
+                "quality": q,
                 "w": img.shape[1], "h": img.shape[0],
                 "detections": [{"label": names[c], "conf": round(p, 3), "box": [round(v) for v in box]}
                                for c, p, *box in dets],
