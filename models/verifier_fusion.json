@@ -1,0 +1,14 @@
+{
+ "thetas": [
+  -3.878904342651367,
+  2.862060785293579,
+  3.503361940383911,
+  1.7647709846496582
+ ],
+ "cues": [
+  "embedding",
+  "geometry",
+  "colour"
+ ],
+ "fitted_on": "proxy COCO val50, dinov2"
+}

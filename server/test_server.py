@@ -10,6 +10,8 @@ import time
 import urllib.request
 from pathlib import Path
 
+import cv2 as cv
+import numpy as np
 import websockets
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -30,12 +32,17 @@ try:
             reply = json.loads(await ws.recv())
             await ws.send(b"not a jpeg")
             bad = json.loads(await ws.recv())
-        return reply, bad
+            dark = cv.imdecode(np.frombuffer(IMG.read_bytes(), np.uint8), cv.IMREAD_COLOR) // 10
+            await ws.send(cv.imencode(".jpg", dark)[1].tobytes())
+            coached = json.loads(await ws.recv())
+        return reply, bad, coached
 
-    reply, bad = asyncio.run(check())
+    reply, bad, coached = asyncio.run(check())
     print(reply)
     assert any(d["label"] == "person" for d in reply["detections"]), "no person detected"
     assert "error" in bad
+    assert reply["quality"]["issue"] is None
+    assert coached["quality"]["issue"] == "dark" and "detections" not in coached, coached
     print("SERVER TEST PASSED")
 finally:
     server.terminate()
