@@ -39,6 +39,7 @@ The first script also downloads 50 COCO val images to `data/coco/val50/`, and th
 ```
 .venv/Scripts/python -m uvicorn --app-dir server main:app --host 0.0.0.0 --port 8000
 .venv/Scripts/python server/test_server.py
+.venv/Scripts/python server/test_search_e2e.py   # whole search over /ws, AWS faked in memory
 ```
 
 - `GET /health` returns the OpenCV version and the model name.
@@ -46,6 +47,14 @@ The first script also downloads 50 COCO val images to `data/coco/val50/`, and th
   - usable frame: `{"quality", "w", "h", "detections": [{"label", "conf", "box": [x1, y1, x2, y2]}]}`, with boxes in pixels of the frame you sent
   - bad frame (camera coach): `{"quality": {"issue": "blur|dark|bright|shake|blocked", ...}, "fix": {"en", "fr", "ar"}}`, with no detection
   - not a JPEG: `{"error": "..."}`
+- Search (text messages on the same `/ws`):
+  - `{"type": "start", "item_id": "..."}` starts searching for a registered item. Frames then also get `"match"` (0–1) on boxes of the item's class.
+  - `{"type": "answer", "answer": "yes" | "no" | "got_it"}`: reply to "is it yours?", or the item is in hand.
+  - `{"type": "stop"}`
+  - Every reply has `"state"` (`SCAN`, `COACH`, `CANDIDATE`, `CONFIRM`, `GUIDE`, `FOUND`, `NOT_FOUND`, or `null` with no search) and `"actions"`:
+    `{"type": "speak", "key", "text": {"en", "fr", "ar"}}`, `{"type": "ask_user", "options": ["yes", "no"]}`,
+    `{"type": "guide", "cx", "cy", "size", "clock"}` (0–1 coordinates, every frame in `GUIDE`), `{"type": "planner", "event"}`, `{"type": "save_last_seen"}`.
+  - "found" is only spoken at match ≥ 0.8 or after the user says yes (`server/agent/search.py`).
 - `FINDMINE_MODEL` sets the ONNX path (default `models/findmine12.onnx`, our 12 classes; `models/yolo11n.onnx` is the stock 80-class COCO model; the class names come from the `.json` file next to it).
 
 Licences: Ultralytics YOLO is AGPL-3.0. DINOv2 is Apache-2.0.
