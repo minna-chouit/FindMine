@@ -2,18 +2,23 @@
 
 Run from the repo root:  .venv/Scripts/python -m uvicorn --app-dir server main:app --host 0.0.0.0 --port 8000
 """
+import asyncio
+import html
 import json
 import logging
 import os
 import time
 import uuid
+from collections import deque
 from pathlib import Path
 
 import cv2 as cv
 import numpy as np
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 
+from agent.planner import plan
 from agent.search import Search, log_trace
 from pipeline.coach import FIX, Coach
 from pipeline.detect import Detector
@@ -38,6 +43,53 @@ def health():
     return {"ok": True, "opencv": cv.__version__, "model": MODEL.name}
 
 
+TRACES = {}  # session -> recent trace records, for the /trace page (in memory; logs keep everything)
+
+
+def tracer(session, item_id):
+    if len(TRACES) >= 50:
+        TRACES.pop(next(iter(TRACES)))  # oldest session
+    records = TRACES[session] = deque(maxlen=1000)
+
+    def write(r):
+        r = {**r, "session": session, "item_id": item_id}
+        records.append(r)
+        log_trace(r)
+    return write
+
+
+@app.get("/trace", response_class=HTMLResponse)
+def trace_list():
+    rows = "".join(f'<li><a href="/trace/{s}">{s}</a> ({len(r)} steps)</li>' for s, r in reversed(TRACES.items()))
+    return f'<!doctype html><html lang="en"><title>FindMine traces</title><h1>Search sessions</h1><ul>{rows}</ul></html>'
+
+
+@app.get("/trace/{session}.json")
+def trace_json(session: str):
+    return list(TRACES.get(session, []))
+
+
+@app.get("/trace/{session}", response_class=HTMLResponse)
+def trace_page(session: str):
+    """Agent trace replay (F6.7): what OpenCV saw, what was decided, what the planner chose."""
+    rows = []
+    for r in TRACES.get(session, []):
+        if "planner_event" in r:
+            what = f"planner ({r['planner_event']}, {r['latency_ms']} ms)"
+            did = r.get("error") or "; ".join(f"{c['name']}({json.dumps(c['input'], ensure_ascii=False)})" for c in r["tools"])
+        else:
+            what = f"{r['from']} → {r['to']}"
+            obs = r["observation"]
+            did = f"picture: {obs['issue'] or 'ok'}; matches: {obs['candidates']} | {r['decision']} | {', '.join(r['actions'])}"
+        rows.append(f"<tr><td>{r.get('t', '')}</td><td>{html.escape(what)}</td><td>{html.escape(did)}</td></tr>")
+    return ('<!doctype html><html lang="en"><meta name="viewport" content="width=device-width, initial-scale=1">'
+            f'<title>Trace {html.escape(session)}</title><style>body{{font:16px system-ui;margin:16px;background:#fff;color:#111}}'
+            'table{border-collapse:collapse;width:100%}td,th{border:1px solid #888;padding:6px;text-align:left;vertical-align:top}'
+            f'</style><h1>Search trace {html.escape(session)}</h1><p><a href="/trace">All sessions</a></p>'
+            '<table><thead><tr><th scope="col">time (s)</th><th scope="col">step</th><th scope="col">seen → decided → did</th>'
+            f'</tr></thead><tbody>{"".join(rows)}</tbody></table></html>')
+
+
 def save_last_seen(item_id):
     # ponytail: time only; add the room label (F7.1) when the app asks the user for it
     table.update_item(Key={"item_id": item_id}, UpdateExpression="SET last_seen = :t",
@@ -48,13 +100,14 @@ def save_last_seen(item_id):
 async def frames(sock: WebSocket):
     """Text messages control a search, binary messages are JPEG frames.
 
-    {"type": "start", "item_id": ...}             start searching for a registered item
+    {"type": "start", "item_id": ..., "lang": "en"|"fr"|"ar"}   start searching for a registered item
     {"type": "answer", "answer": "yes"|"no"|"got_it"}
     {"type": "stop"}
     Every reply has "state" (null when no search) and "actions" (things to speak, ask or guide).
     """
     await sock.accept()
-    coach, search, item, refs, target = Coach(), None, None, [], None
+    coach, search, item, refs, target, lang = Coach(), None, None, [], None, "en"
+    q, best_match, torch = {}, 0.0, False
     session = uuid.uuid4().hex[:8]
     while True:
         msg = await sock.receive()
@@ -68,8 +121,9 @@ async def frames(sock: WebSocket):
                 if item:
                     refs = load_refs(item["item_id"])
                     target = names.index(item["class"]) if item.get("class") in names else None  # None = any class
-                    search = Search(item["name"], last_seen=item.get("last_seen"), trace=lambda r, i=item["item_id"]:
-                                    log_trace({**r, "session": session, "item_id": i}))
+                    lang, best_match = cmd.get("lang", "en"), 0.0
+                    search = Search(item["name"], last_seen=item.get("last_seen"), trace=tracer(session, item["item_id"]))
+                    reply["session"] = session
                 else:
                     reply["error"] = "item not found"
             elif cmd.get("type") == "answer" and search:
@@ -96,8 +150,19 @@ async def frames(sock: WebSocket):
                     if refs and min(crop.shape[:2]) >= 8:
                         o["match"] = round(verifier(verifier.features(crop), refs), 3)
                         candidates.append({"box": [x1 / w, y1 / h, x2 / w, y2 / h], "conf": o["match"]})
+                best_match = max([best_match] + [c["conf"] for c in candidates])
                 acts = search.step(q, candidates)
             reply = {"quality": q, "w": w, "h": h, "detections": out}
+        for ev in [a for a in acts if a["type"] == "planner"]:
+            obs = {"event": ev["event"], "lang": lang, "item": item["name"], "state": search.state,
+                   "elapsed_s": round(time.monotonic() - search.t0), "last_seen": item.get("last_seen"),
+                   "picture": q.get("issue") or "ok", "brightness_0_255": q.get("metrics", {}).get("mean"),
+                   "best_match_so_far": round(best_match, 2), "torch_on": torch}
+            # ponytail: the phone waits for Bedrock (~1-2 s, rare events); answer asynchronously if it feels laggy
+            more, rec = await asyncio.to_thread(plan, obs)
+            search.trace({"t": round(time.monotonic() - search.t0, 3), "observation_sent": obs, **rec})
+            torch = next((a["on"] for a in more if a["type"] == "torch"), torch)
+            acts += more
         if any(a["type"] == "save_last_seen" for a in acts):
             save_last_seen(item["item_id"])
         await sock.send_json(reply | {"state": search and search.state, "actions": acts})
