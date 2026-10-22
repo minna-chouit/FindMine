@@ -41,6 +41,7 @@ The first script also downloads 50 COCO val images to `data/coco/val50/`, and th
 .venv/Scripts/python server/test_server.py
 .venv/Scripts/python server/test_search_e2e.py   # whole search over /ws, AWS faked in memory
 .venv/Scripts/python server/test_planner.py      # add --live on a machine with Bedrock access
+.venv/Scripts/python ml/test_eval_home.py      # evaluation script on a tiny fake home set
 ```
 
 - `GET /health` returns the OpenCV version and the model name.
@@ -61,3 +62,15 @@ The first script also downloads 50 COCO val images to `data/coco/val50/`, and th
 - `FINDMINE_MODEL` sets the ONNX path (default `models/findmine12.onnx`, our 12 classes; `models/yolo11n.onnx` is the stock 80-class COCO model; the class names come from the `.json` file next to it).
 
 Licences: Ultralytics YOLO is AGPL-3.0. DINOv2 is Apache-2.0.
+
+## Evaluate on our own items
+
+Put each personal item in `data/home/<class>__<name>/` (class = one of the 12 detector classes, e.g. `keys__house_keys`):
+`ref/` holds the 3–5 registration photos, `test/` holds room photos or videos where that item is visible.
+Two items of the same class (look-alikes) measure wrong-item errors.
+
+```
+.venv/Scripts/python ml/eval_home.py
+```
+
+It writes `eval/home_results.csv` (one row per frame and item) and `eval/home_summary.md` (per-item detection and decisions, precision/recall at the *found* and *ask* thresholds).
