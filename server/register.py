@@ -12,6 +12,7 @@ import io
 import os
 import time
 import uuid
+from pathlib import Path
 
 import boto3
 import cv2 as cv
@@ -23,7 +24,7 @@ from pipeline.verify import Verifier
 REGION = os.environ.get("AWS_REGION", "us-east-1")
 BUCKET = os.environ.get("FINDMINE_BUCKET", "findmine-items-bucket")
 TABLE = os.environ.get("FINDMINE_TABLE", "findmine-items")
-VERIFIER_MODEL = os.environ.get("FINDMINE_VERIFIER", "models/dinov2_vits14.onnx")
+VERIFIER_MODEL = os.environ.get("FINDMINE_VERIFIER", str(Path(__file__).resolve().parent.parent / "models/dinov2_vits14.onnx"))
 MAX_REFS = 5
 MIN_POINTS = 20  # fewer SIFT points than this = photo has too little texture
 
