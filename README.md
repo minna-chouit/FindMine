@@ -46,6 +46,6 @@ The first script also downloads 50 COCO val images to `data/coco/val50/`, and th
   - usable frame: `{"quality", "w", "h", "detections": [{"label", "conf", "box": [x1, y1, x2, y2]}]}`, with boxes in pixels of the frame you sent
   - bad frame (camera coach): `{"quality": {"issue": "blur|dark|bright|shake|blocked", ...}, "fix": {"en", "fr", "ar"}}`, with no detection
   - not a JPEG: `{"error": "..."}`
-- `FINDMINE_MODEL` sets the ONNX path (default `models/yolo11n.onnx`; the class names come from the `.json` file next to it).
+- `FINDMINE_MODEL` sets the ONNX path (default `models/findmine12.onnx`, our 12 classes; `models/yolo11n.onnx` is the stock 80-class COCO model; the class names come from the `.json` file next to it).
 
 Licences: Ultralytics YOLO is AGPL-3.0. DINOv2 is Apache-2.0.

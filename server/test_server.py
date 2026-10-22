@@ -1,4 +1,4 @@
-"""Starts the server, sends one COCO image over the WebSocket, checks a person comes back.
+"""Starts the server, sends one COCO image over the WebSocket, checks a cup comes back.
 
 Run from the repo root:  .venv/Scripts/python server/test_server.py
 """
@@ -15,7 +15,7 @@ import numpy as np
 import websockets
 
 ROOT = Path(__file__).resolve().parent.parent
-IMG = ROOT / "data/coco/val50/000000000139.jpg"  # living room with two people; fetched by ml/spike_yolo_dnn.py
+IMG = ROOT / "data/coco/val50/000000002592.jpg"  # a cup; fetched by ml/spike_yolo_dnn.py
 
 server = subprocess.Popen([sys.executable, "-m", "uvicorn", "--app-dir", "server", "main:app", "--port", "8765"], cwd=ROOT)
 try:
@@ -39,7 +39,7 @@ try:
 
     reply, bad, coached = asyncio.run(check())
     print(reply)
-    assert any(d["label"] == "person" for d in reply["detections"]), "no person detected"
+    assert any(d["label"] == "cup" for d in reply["detections"]), "no cup detected"
     assert "error" in bad
     assert reply["quality"]["issue"] is None
     assert coached["quality"]["issue"] == "dark" and "detections" not in coached, coached

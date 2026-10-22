@@ -15,7 +15,7 @@ from pipeline.coach import FIX, Coach
 from pipeline.detect import Detector
 
 ROOT = Path(__file__).resolve().parent.parent
-MODEL = Path(os.getenv("FINDMINE_MODEL", ROOT / "models/yolo11n.onnx"))
+MODEL = Path(os.getenv("FINDMINE_MODEL", ROOT / "models/findmine12.onnx"))
 
 log = logging.getLogger("uvicorn.error")
 detector = Detector(str(MODEL))
