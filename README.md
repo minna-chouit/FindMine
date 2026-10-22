@@ -40,6 +40,7 @@ The first script also downloads 50 COCO val images to `data/coco/val50/`, and th
 .venv/Scripts/python -m uvicorn --app-dir server main:app --host 0.0.0.0 --port 8000
 .venv/Scripts/python server/test_server.py
 .venv/Scripts/python server/test_search_e2e.py   # whole search over /ws, AWS faked in memory
+.venv/Scripts/python server/test_planner.py      # add --live on a machine with Bedrock access
 ```
 
 - `GET /health` returns the OpenCV version and the model name.
@@ -55,6 +56,8 @@ The first script also downloads 50 COCO val images to `data/coco/val50/`, and th
     `{"type": "speak", "key", "text": {"en", "fr", "ar"}}`, `{"type": "ask_user", "options": ["yes", "no"]}`,
     `{"type": "guide", "cx", "cy", "size", "clock"}` (0–1 coordinates, every frame in `GUIDE`), `{"type": "planner", "event"}`, `{"type": "save_last_seen"}`.
   - "found" is only spoken at match ≥ 0.8 or after the user says yes (`server/agent/search.py`).
+- Planner (`server/agent/planner.py`): when the search is stuck (no candidate for 20 s, bad frames for 8 s, not found), the server asks Claude Haiku 4.5 on Bedrock (`FINDMINE_PLANNER_MODEL`, default `us.anthropic.claude-haiku-4-5-20251001-v1:0`, us-east-1) for the next step: `speak`, `set_torch` (phone action `{"type": "torch", "on"}`) or `ask_user`. The server needs `bedrock:InvokeModel` (IAM role on EC2). If Bedrock fails, the fixed phrase is all the user hears. `start` may pass `"lang"` (`en`, `fr`, `ar`) and its reply carries `"session"`.
+- `GET /trace/<session>` replays a search: what OpenCV saw, each decision, and the planner's tool calls (`/trace` lists the last 50 sessions, `.json` for raw records).
 - `FINDMINE_MODEL` sets the ONNX path (default `models/findmine12.onnx`, our 12 classes; `models/yolo11n.onnx` is the stock 80-class COCO model; the class names come from the `.json` file next to it).
 
 Licences: Ultralytics YOLO is AGPL-3.0. DINOv2 is Apache-2.0.
