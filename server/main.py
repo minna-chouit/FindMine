@@ -54,3 +54,8 @@ async def frames(sock: WebSocket):
             })
     except WebSocketDisconnect:
         pass
+# --- Item registration (Takoua) ---
+from fastapi.middleware.cors import CORSMiddleware
+from register import router as register_router
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.include_router(register_router)
