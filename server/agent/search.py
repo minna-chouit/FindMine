@@ -12,6 +12,8 @@ import json
 import logging
 import time
 
+from pipeline.guide import HFOV
+
 FOUND = 0.8           # plan: precision >= 95% here; recalibrate on FindMine-Home photos
 ASK = 0.5             # plan: precision >= 70% here; below it stay silent and keep scanning
 VERIFY_FRAMES = 3     # median confidence over this many candidate frames before deciding
@@ -22,7 +24,6 @@ STUCK_SECS = 20       # no candidate this long -> planner event (F6.3)
 COACH_STUCK_SECS = 8  # bad frames this long -> planner event
 GIVE_UP_SECS = 120    # whole search -> NOT_FOUND
 REPEAT_SECS = 4       # same spoken coach fix at most this often (F4.2)
-HFOV = 65             # phone camera horizontal field of view, degrees (calibration knob)
 
 PHRASES = {
     "found": {"en": "Found your {item} at {clock} o'clock.", "fr": "{item} trouvé à {clock} heures.",
@@ -177,7 +178,7 @@ class Search:
     def _guide(self, c):
         x1, y1, x2, y2 = c["box"]
         return {"type": "guide", "cx": (x1 + x2) / 2, "cy": (y1 + y2) / 2, "size": (x2 - x1) * (y2 - y1),
-                "clock": clock((x1 + x2) / 2)}
+                "clock": clock((x1 + x2) / 2), "distance": c.get("distance")}
 
     def _go(self, state, now):
         if state == self.state:

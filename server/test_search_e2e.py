@@ -67,6 +67,8 @@ replies, last, session = asyncio.run(search(MINE))
 said = [a.get("key") or a["type"] for r in replies for a in r["actions"]]
 print("mine:", [r["state"] for r in replies], said, [d.get("match") for d in replies[-1]["detections"]])
 assert "found" in said and replies[-1]["state"] == "GUIDE", replies[-1]
+guide = [a for a in replies[-1]["actions"] if a["type"] == "guide"]   # last frame followed by the tracker
+assert guide and guide[0]["distance"] in ("near", "arm", "far"), replies[-1]
 assert last["state"] == "FOUND" and "save_last_seen" in [a["type"] for a in last["actions"]]
 assert "last_seen" in main.table.items["cup1"]
 
