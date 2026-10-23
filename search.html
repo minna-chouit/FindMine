@@ -3,120 +3,333 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>FindMine · Voice settings</title>
+<title>FindMine · Search</title>
 <style>
-  :root { --bg:#ffffff; --fg:#0d1b2a; --muted:#4a5a6a; --btn:#1446a0; --btn-fg:#ffffff; --line:#c9d3dd; --soft:#eef3f8; color-scheme:light; }
+  :root { --bg:#ffffff; --fg:#0d1b2a; --muted:#4a5a6a; --btn:#1446a0; --btn-fg:#ffffff; --yes:#1b7f3a; --no:#b3261e;
+          --line:#c9d3dd; --soft:#eef3f8; color-scheme:light; }
   @media (prefers-color-scheme: dark) {
-    :root { --bg:#05080d; --fg:#f2f5f8; --muted:#a9b6c3; --btn:#5b8cff; --btn-fg:#05080d; --line:#2a3644; --soft:#111a24; color-scheme:dark; }
+    :root { --bg:#05080d; --fg:#f2f5f8; --muted:#a9b6c3; --btn:#5b8cff; --btn-fg:#05080d; --yes:#4cd07d; --no:#ff6b60;
+            --line:#2a3644; --soft:#111a24; color-scheme:dark; }
   }
   * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--fg); font:17px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  body { margin:0; background:var(--bg); color:var(--fg); font:18px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
          padding:calc(env(safe-area-inset-top,0px) + 12px) 14px calc(env(safe-area-inset-bottom,0px) + 16px); }
-  main { max-width:900px; margin:0 auto; }
+  main { max-width:640px; margin:0 auto; }
   h1 { font-size:1.6rem; margin:4px 0 12px; }
-  h2 { font-size:1.15rem; margin:20px 0 8px; }
-  .row { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
-  .row.two { grid-template-columns:repeat(2,1fr); }
-  .row button { min-height:56px; font-size:1.1rem; font-weight:700; border:2px solid var(--line); border-radius:12px;
-                background:var(--bg); color:var(--fg); cursor:pointer; }
-  .row button[aria-pressed="true"] { background:var(--btn); color:var(--btn-fg); border-color:var(--btn); }
+  .big { display:block; width:100%; min-height:72px; margin-top:10px; font-size:1.35rem; font-weight:700; border:0;
+         border-radius:14px; background:var(--btn); color:var(--btn-fg); cursor:pointer; }
+  .big.yes { background:var(--yes); color:#fff; }
+  .big.no { background:var(--no); color:#fff; }
+  .answers { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .answers .big { min-height:110px; font-size:1.8rem; }
   button:focus-visible { outline:4px solid #ffd400; outline-offset:3px; }
-  #voice, .note { color:var(--muted); min-height:1.4em; }
-  .scroll { overflow-x:auto; margin-top:8px; }
-  table { border-collapse:collapse; width:100%; min-width:720px; font-size:.95rem; }
-  th, td { border-bottom:1px solid var(--line); padding:8px 6px; text-align:start; vertical-align:top; }
-  th { position:sticky; top:0; background:var(--soft); }
-  td.key { font-family:ui-monospace,Consolas,monospace; font-size:.8rem; color:var(--muted); white-space:nowrap; }
-  td[dir="rtl"] { text-align:right; }
-  td button { border:0; background:none; color:var(--btn); font-size:1.1rem; cursor:pointer; padding:0 4px; }
+  #state { display:inline-block; font-size:.9rem; font-weight:800; letter-spacing:.06em; padding:4px 10px;
+           border-radius:999px; background:var(--soft); }
+  #said { font-size:1.4rem; font-weight:700; min-height:1.5em; margin:10px 0; }
+  #direction { font-size:2rem; font-weight:800; text-align:center; min-height:1.3em; }
+  #status { color:var(--muted); min-height:1.4em; }
+  #stage { position:relative; margin-top:10px; }
+  video, canvas { display:block; width:100%; border-radius:10px; }
+  canvas { position:absolute; inset:0; height:100%; pointer-events:none; }
+  .hidden { display:none !important; }
+  .small { font-size:.95rem; color:var(--muted); }
   a { color:var(--btn); }
 </style>
 </head>
 <body>
 <main>
-  <h1>Voice settings</h1>
+  <h1>Find my item <span id="modeTag" class="small"></span></h1>
 
-  <h2>Language</h2>
-  <div class="row" id="langs"></div>
-  <p id="voice"></p>
+  <!-- 1. Pick an item -->
+  <section id="pick">
+    <p id="pickMsg">Loading your items…</p>
+    <div id="items"></div>
+    <p class="small"><a href="./register.html">Register a new item</a> · <a href="./find.html">Ask by voice</a> · <a href="./settings.html">Language</a></p>
+  </section>
 
-  <h2>How much should it talk?</h2>
-  <div class="row two">
-    <button data-vb="short">Short</button>
-    <button data-vb="detailed">Detailed</button>
-  </div>
+  <!-- 2. Searching -->
+  <section id="run" class="hidden">
+    <span id="state">…</span>
+    <p id="said" aria-live="assertive"></p>
+    <p id="direction" aria-hidden="true"></p>
 
-  <h2>Test mode</h2>
-  <div class="row two">
-    <button data-mode="full">Full app</button>
-    <button data-mode="baseline">Baseline (test A)</button>
-  </div>
-  <p id="modeNote" class="note"></p>
+    <div id="ask" class="answers hidden">
+      <button class="big yes" data-answer="yes">Yes</button>
+      <button class="big no" data-answer="no">No</button>
+    </div>
+    <button id="gotIt" class="big yes hidden" data-answer="got_it">Got it ✋</button>
+    <button id="again" class="big hidden">Search again</button>
 
-  <h2>Safety notice</h2>
-  <div class="row two"><button id="replay">Play the notice again</button></div>
+    <div id="stage">
+      <video id="video" autoplay playsinline muted></video>
+      <canvas id="overlay"></canvas>
+    </div>
 
-  <h2>All sentences (tap ▶ to listen)</h2>
-  <div class="scroll"><table id="table"></table></div>
-
-  <p><a href="./">Camera page</a> · <a href="./find.html">Find my item</a> · <a href="./register.html">Register an item</a></p>
+    <button id="stop" class="big no">Stop</button>
+    <p id="status" role="status" aria-live="polite"></p>
+    <p class="small" id="traceLink"></p>
+  </section>
 </main>
 
 <script src="prompts.js"></script>
 <script>
-  const SAMPLE = { item: "keys", clock: 2, n: 1, total: 5, side: "side_front", dist: "dist_mid", items: "keys, wallet" };
-  const LANGS = Object.keys(FM.LANG_INFO);
+  const HTTP = "https://54-90-98-230.sslip.io";
+  const WS = "wss://54-90-98-230.sslip.io/ws";
+  const FPS = 5, WIDTH = 640, QUALITY = 0.7;
 
-  function refresh() {
-    document.querySelectorAll("[data-l]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.l === FM.lang)));
-    document.querySelectorAll("[data-vb]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.vb === FM.verbosity)));
-    document.querySelectorAll("[data-mode]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === FM.mode)));
-    document.getElementById("modeNote").textContent = FM.mode === "baseline"
-      ? "Baseline is ON: searches send mode \"baseline\" (test condition A)."
-      : "Normal app. Switch to Baseline only for user tests, condition A.";
-    const name = FM.LANG_INFO[FM.lang].name;
-    document.getElementById("voice").textContent = FM.hasVoice()
-      ? "Voice for " + name + " found on this phone ✓"
-      : "No voice for " + name + " on this phone. Install it in Settings → Text-to-speech → Google → Install voice data.";
-    buildTable();
+  const $ = (id) => document.getElementById(id);
+  const video = $("video"), overlay = $("overlay"), ctx = overlay.getContext("2d");
+  const grab = document.createElement("canvas"), gctx = grab.getContext("2d");
+
+  // App language from settings.html. The server knows en/fr/ar; Darija uses the Arabic text.
+  const appLang = FM.lang;
+  const serverLang = appLang === "dz" ? "ar" : appLang;
+  const ttsCode = FM.LANG_INFO[appLang].tts;
+
+  let ws = null, running = false, waiting = false, sentAt = 0, timer = null;
+  let item = null, state = null, lastGuideAt = 0, lastVibe = 0, torchOn = false;
+
+  // ---------- Speech ----------
+  function pickVoice() {
+    const vs = speechSynthesis.getVoices(), base = ttsCode.slice(0, 2);
+    return vs.find((v) => v.lang.replace("_", "-") === ttsCode) || vs.find((v) => v.lang.toLowerCase().startsWith(base)) || null;
   }
+  const SAME_TEXT_GAP_MS = 8000;   // never repeat the same sentence within 8 s
+  const MIN_GAP_MS = 3000;         // at least 3 s between normal sentences
+  const RATE = 0.9;                // a bit slower than default
+  const lastSaidAt = {};
+  let lastSpokeAt = 0;
 
-  function buildTable() {
-    const keys = Object.keys(FM.PROMPTS.en);
-    let html = "<tr><th>Key</th>" + LANGS.map((l) => "<th>" + FM.LANG_INFO[l].name + "</th>").join("") + "</tr>";
-    for (const k of keys) {
-      html += "<tr><td class='key'>" + k + "</td>";
-      for (const l of LANGS) {
-        const text = FM.t(k, SAMPLE, { lang: l });
-        const dir = FM.LANG_INFO[l].dir;
-        html += "<td dir='" + dir + "'><button aria-label='Play' data-k='" + k + "' data-pl='" + l + "'>▶</button> " +
-                text.replace(/</g, "&lt;") + "</td>";
-      }
-      html += "</tr>";
+  function speak(text, urgent) {
+    if (!text) return;
+    const now = performance.now();
+    if (!urgent) {
+      if (now - (lastSaidAt[text] || -1e9) < SAME_TEXT_GAP_MS) return;
+      if (now - lastSpokeAt < MIN_GAP_MS) return;
+      if ("speechSynthesis" in window && (speechSynthesis.speaking || speechSynthesis.pending)) return;
     }
-    document.getElementById("table").innerHTML = html;
+    lastSaidAt[text] = now;
+    lastSpokeAt = now;
+    $("said").textContent = text;
+    if (!("speechSynthesis" in window)) return;
+    if (urgent) speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = ttsCode;
+    u.rate = RATE;
+    const v = pickVoice(); if (v) u.voice = v;
+    speechSynthesis.speak(u);
+  }
+  function textOf(t) {
+    if (!t) return "";
+    if (typeof t === "string") return t;
+    return t[serverLang] || t.en || Object.values(t)[0] || "";
   }
 
-  document.getElementById("langs").innerHTML = LANGS.map((l) =>
-    "<button data-l='" + l + "'>" + FM.LANG_INFO[l].name + "</button>").join("");
-  document.getElementById("langs").addEventListener("click", (e) => {
-    const b = e.target.closest("[data-l]"); if (!b) return;
-    FM.setLang(b.dataset.l); refresh(); FM.say("welcome", {}, { interrupt: true });
-  });
-  document.querySelectorAll("[data-vb]").forEach((b) => b.addEventListener("click", () => {
-    FM.setVerbosity(b.dataset.vb); refresh(); FM.say("searching", SAMPLE, { interrupt: true });
-  }));
-  document.querySelectorAll("[data-mode]").forEach((b) => b.addEventListener("click", () => {
-    FM.setMode(b.dataset.mode); refresh();
-  }));
-  document.getElementById("replay").addEventListener("click", () => FM.showDisclaimer(true));
-  document.getElementById("table").addEventListener("click", (e) => {
-    const b = e.target.closest("[data-k]"); if (!b) return;
-    FM.say(b.dataset.k, SAMPLE, { lang: b.dataset.pl, interrupt: true });
-  });
+  // ---------- Beeps (stereo) ----------
+  let audio = null, beepTimer = null;
+  const beep = { pan: 0, gap: 850, freq: 600 };
+  function startAudio() {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    if (audio.state === "suspended") audio.resume();
+    loopBeeps();
+  }
+  function playBeep() {
+    const osc = audio.createOscillator(), gain = audio.createGain();
+    const pan = audio.createStereoPanner ? audio.createStereoPanner() : null;
+    const t = audio.currentTime;
+    osc.frequency.value = beep.freq;
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.4, t + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+    osc.connect(gain);
+    if (pan) { pan.pan.value = beep.pan; gain.connect(pan); pan.connect(audio.destination); } else gain.connect(audio.destination);
+    osc.start(t); osc.stop(t + 0.1);
+  }
+  function loopBeeps() {
+    clearTimeout(beepTimer);
+    if (!running) return;
+    const active = state === "GUIDE" && performance.now() - lastGuideAt < 700;
+    if (active) playBeep();
+    beepTimer = setTimeout(loopBeeps, active ? beep.gap : 200);
+  }
+  function onGuide(g) {
+    lastGuideAt = performance.now();
+    const off = g.cx - 0.5;
+    beep.pan = Math.max(-1, Math.min(1, off * 2));
+    beep.gap = g.size > 0.3 ? 180 : g.size > 0.12 ? 450 : 850;
+    beep.freq = Math.abs(off) < 0.12 ? 900 : 600;
+    $("direction").textContent = g.clock + " o’clock";
+    if (Math.abs(off) < 0.12 && g.size > 0.3 && navigator.vibrate && lastGuideAt - lastVibe > 1000) {
+      lastVibe = lastGuideAt;
+      navigator.vibrate([80, 60, 80]);
+    }
+  }
 
-  if ("speechSynthesis" in window) speechSynthesis.addEventListener("voiceschanged", refresh);
-  refresh();
+  // ---------- Torch (Android Chrome) ----------
+  async function setTorch(on) {
+    const track = video.srcObject && video.srcObject.getVideoTracks()[0];
+    if (!track || !track.getCapabilities || !track.getCapabilities().torch) {
+      $("status").textContent = "This phone can’t turn on the torch from the browser.";
+      return;
+    }
+    try { await track.applyConstraints({ advanced: [{ torch: on }] }); torchOn = on; }
+    catch (e) { $("status").textContent = "Torch error: " + e.message; }
+  }
+
+  // ---------- Screen per state ----------
+  function showState(s) {
+    const changed = s !== state;
+    state = s;
+    $("state").textContent = s || "…";
+    $("ask").classList.toggle("hidden", !(s === "CONFIRM" || s === "CANDIDATE") || !askOpen);
+    $("gotIt").classList.toggle("hidden", !(s === "GUIDE" || s === "FOUND"));
+    $("again").classList.toggle("hidden", s !== "NOT_FOUND");
+    if (s !== "GUIDE") $("direction").textContent = "";
+    if (changed && s === "FOUND" && navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]);
+  }
+  let askOpen = false;
+
+  function handleActions(actions) {
+    for (const a of actions || []) {
+      if (a.type === "speak") speak(textOf(a.text), ["found", "planner", "ask", "is_this_yours", "confirm"].includes(a.key));
+      else if (a.type === "ask_user") { askOpen = true; $("ask").classList.remove("hidden"); }
+      else if (a.type === "guide") onGuide(a);
+      else if (a.type === "torch") setTorch(!!a.on);
+      else if (a.type === "save_last_seen") $("status").textContent = "Saved where you found it ✓";
+    }
+  }
+
+  // ---------- Items ----------
+  async function loadItems() {
+    try {
+      const items = await (await fetch(HTTP + "/items")).json();
+      if (!items.length) { $("pickMsg").textContent = FM.t("no_items"); return; }
+      $("pickMsg").textContent = "What are you looking for?";
+      $("items").innerHTML = "";
+      for (const it of items) {
+        const b = document.createElement("button");
+        b.className = "big";
+        b.textContent = it.name;
+        b.addEventListener("click", () => start(it));
+        $("items").appendChild(b);
+      }
+      // Coming from find.html (voice) or a link like search.html?item=abc
+      const wanted = new URLSearchParams(location.search).get("item");
+      const hit = items.find((i) => i.item_id === wanted);
+      if (hit) start(hit);
+    } catch (e) {
+      $("pickMsg").textContent = "Couldn’t reach the server. Check it’s running, then reload.";
+    }
+  }
+
+  // ---------- Search ----------
+  async function start(it) {
+    item = it;
+    try {
+      video.srcObject = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+      await video.play();
+    } catch (e) {
+      speak(FM.t("camera_blocked"), true);
+      return;
+    }
+    $("pick").classList.add("hidden");
+    $("run").classList.remove("hidden");
+    running = true; askOpen = false; torchOn = false;
+    showState(null);
+    startAudio();
+    speak(FM.t("searching", { item: it.name }), true);
+    connect();
+    timer = setInterval(sendFrame, 1000 / FPS);
+  }
+
+  function stop() {
+    running = false;
+    clearInterval(timer); clearTimeout(beepTimer);
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: "stop" }));
+    if (ws) ws.close();
+    if (video.srcObject) video.srcObject.getTracks().forEach((t) => t.stop());
+    video.srcObject = null;
+    if ("speechSynthesis" in window) speechSynthesis.cancel();
+    $("run").classList.add("hidden");
+    $("pick").classList.remove("hidden");
+    loadItems();
+  }
+
+  function connect() {
+    ws = new WebSocket(WS);
+    ws.onopen = () => {
+      waiting = false;
+      ws.send(JSON.stringify(Object.assign({ type: "start", item_id: item.item_id, lang: serverLang }, FM.startExtras())));
+      $("status").textContent = "Connected.";
+    };
+    ws.onclose = () => {
+      if (!running) return;
+      $("status").textContent = FM.t("server_lost");
+      setTimeout(() => { if (running) connect(); }, 1500);
+    };
+    ws.onmessage = (e) => {
+      const data = JSON.parse(e.data);
+      if (data.session) {
+        $("traceLink").innerHTML = 'Trace: <a href="' + HTTP + "/trace/" + data.session + '" target="_blank">' + data.session + "</a>";
+      }
+      if (data.w || data.quality || data.error === "not a JPEG frame") waiting = false;
+      if (data.error) { $("status").textContent = "Server: " + data.error; if (data.error === "item not found") stop(); return; }
+      if ("state" in data) showState(data.state);
+      handleActions(data.actions);
+      draw(data);
+    };
+  }
+
+  function answer(a) {
+    if (!ws || ws.readyState !== 1) return;
+    ws.send(JSON.stringify({ type: "answer", answer: a }));
+    if (a === "yes" || a === "no") { askOpen = false; $("ask").classList.add("hidden"); }
+    if (a === "got_it") {
+      speak(FM.t("found", { item: item.name }), true);
+      setTimeout(stop, 2500);
+    }
+  }
+
+  function sendFrame() {
+    if (!running || !ws || ws.readyState !== 1 || !video.videoWidth) return;
+    if (waiting && performance.now() - sentAt < 3000) return;
+    waiting = true;
+    const h = Math.round(video.videoHeight * WIDTH / video.videoWidth);
+    grab.width = WIDTH; grab.height = h;
+    gctx.drawImage(video, 0, 0, WIDTH, h);
+    grab.toBlob((blob) => {
+      if (!blob || ws.readyState !== 1) { waiting = false; return; }
+      sentAt = performance.now();
+      ws.send(blob);
+    }, "image/jpeg", QUALITY);
+  }
+
+  function draw(data) {
+    if (!data.w) { ctx.clearRect(0, 0, overlay.width, overlay.height); return; }
+    overlay.width = data.w; overlay.height = data.h;
+    ctx.clearRect(0, 0, data.w, data.h);
+    const size = Math.round(data.w / 24);
+    ctx.font = "700 " + size + "px system-ui, sans-serif";
+    ctx.lineWidth = Math.max(3, data.w / 150);
+    for (const d of data.detections || []) {
+      const [x1, y1, x2, y2] = d.box;                 // corners, in pixels
+      const mine = typeof d.match === "number";
+      const color = mine ? (d.match >= 0.8 ? "#2ecc71" : "#ffd400") : "rgba(255,255,255,0.6)";
+      ctx.strokeStyle = color;
+      ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+      const label = mine ? d.label + " · match " + Math.round(d.match * 100) + "%" : d.label;
+      const tw = ctx.measureText(label).width + 10, ty = Math.max(0, y1 - size - 6);
+      ctx.fillStyle = color; ctx.fillRect(x1, ty, tw, size + 6);
+      ctx.fillStyle = "#000"; ctx.fillText(label, x1 + 5, ty + size);
+    }
+  }
+
+  document.querySelectorAll("[data-answer]").forEach((b) => b.addEventListener("click", () => answer(b.dataset.answer)));
+  $("stop").addEventListener("click", stop);
+  $("again").addEventListener("click", () => { const it = item; stop(); setTimeout(() => start(it), 300); });
+
+  if (FM.mode === "baseline") $("modeTag").textContent = "· baseline (test A)";
+  loadItems();
 </script>
 </body>
 </html>
