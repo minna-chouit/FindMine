@@ -94,14 +94,28 @@
     const vs = speechSynthesis.getVoices(), base = ttsCode.slice(0, 2);
     return vs.find((v) => v.lang.replace("_", "-") === ttsCode) || vs.find((v) => v.lang.toLowerCase().startsWith(base)) || null;
   }
+  const SAME_TEXT_GAP_MS = 8000;   // never repeat the same sentence within 8 s
+  const MIN_GAP_MS = 3000;         // at least 3 s between normal sentences
+  const RATE = 0.9;                // a bit slower than default
+  const lastSaidAt = {};
+  let lastSpokeAt = 0;
+
   function speak(text, urgent) {
     if (!text) return;
+    const now = performance.now();
+    if (!urgent) {
+      if (now - (lastSaidAt[text] || -1e9) < SAME_TEXT_GAP_MS) return;
+      if (now - lastSpokeAt < MIN_GAP_MS) return;
+      if ("speechSynthesis" in window && (speechSynthesis.speaking || speechSynthesis.pending)) return;
+    }
+    lastSaidAt[text] = now;
+    lastSpokeAt = now;
     $("said").textContent = text;
     if (!("speechSynthesis" in window)) return;
     if (urgent) speechSynthesis.cancel();
-    else if (speechSynthesis.pending) return;        // don't pile up old sentences
     const u = new SpeechSynthesisUtterance(text);
     u.lang = ttsCode;
+    u.rate = RATE;
     const v = pickVoice(); if (v) u.voice = v;
     speechSynthesis.speak(u);
   }
@@ -177,7 +191,7 @@
 
   function handleActions(actions) {
     for (const a of actions || []) {
-      if (a.type === "speak") speak(textOf(a.text), a.key === "found" || a.key === "planner");
+      if (a.type === "speak") speak(textOf(a.text), ["found", "planner", "ask", "is_this_yours", "confirm"].includes(a.key));
       else if (a.type === "ask_user") { askOpen = true; $("ask").classList.remove("hidden"); }
       else if (a.type === "guide") onGuide(a);
       else if (a.type === "torch") setTorch(!!a.on);
