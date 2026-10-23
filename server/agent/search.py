@@ -13,9 +13,11 @@ import logging
 import time
 
 from pipeline.guide import HFOV
+from pipeline.verify import FUSION
 
-FOUND = 0.8           # plan: precision >= 95% here; recalibrate on FindMine-Home photos
-ASK = 0.5             # plan: precision >= 70% here; below it stay silent and keep scanning
+_cal = json.loads(FUSION.read_text()) if FUSION.exists() else {}
+FOUND = _cal.get("found", 0.8)  # precision >= 95% here (plan N3); set by ml/eval_home.py --fit
+ASK = _cal.get("ask", 0.5)      # precision >= 70% here; below it stay silent and keep scanning
 VERIFY_FRAMES = 3     # median confidence over this many candidate frames before deciding
 CONFIRM_SECS = 10     # no answer to "is it yours?" -> back to scanning
 REJECT_SECS = 10      # after "no", don't ask again for this long

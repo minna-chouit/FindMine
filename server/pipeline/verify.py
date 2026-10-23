@@ -4,7 +4,7 @@
     geometry   SIFT + ratio test + cv.findHomography RANSAC inliers (textured items)
     colour     HSV histogram correlation (plain items like mugs)
 Fusion = logistic regression (cv.ml) whose weights live in models/verifier_fusion.json,
-fitted by ml/eval_verifier.py. Recalibrate on FindMine-Home photos when they exist.
+fitted by `ml/eval_home.py --fit` on FindMine-Home photos (it also stores the found/ask thresholds).
 """
 import json
 from pathlib import Path
@@ -58,9 +58,12 @@ class Verifier:
             max(cv.compareHist(q["hist"], r["hist"], cv.HISTCMP_CORREL) for r in refs),
         ], np.float32)
 
+    def fuse(self, c):
+        """Per-cue scores -> confidence in [0, 1]."""
+        if self.w is None:  # not calibrated yet: plain average
+            return float(np.clip(np.mean(c), 0, 1))
+        return float(1 / (1 + np.exp(-(self.w[0] + np.asarray(c) @ self.w[1:]))))
+
     def __call__(self, q, refs):
         """Confidence in [0, 1] that crop features q are the same item as refs."""
-        c = self.cues(q, refs)
-        if self.w is None:  # not calibrated yet: plain average
-            return float(np.clip(c.mean(), 0, 1))
-        return float(1 / (1 + np.exp(-(self.w[0] + c @ self.w[1:]))))
+        return self.fuse(self.cues(q, refs))
