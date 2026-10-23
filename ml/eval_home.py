@@ -4,12 +4,13 @@ and (with --fit) calibrate the verifier's fusion weights and found/ask threshold
 Folder layout (one folder per personal item, class = one of the 12 detector classes):
     data/home/<class>__<name>/ref/*.jpg               3-5 registration photos (item fills the frame)
     data/home/<class>__<name>/test/*.jpg|*.mp4        this item in a room, NO other item of its class in view
-    data/home/<class>__<name>/test/with_other/*       this item on the LEFT half, a look-alike on the RIGHT half
+    data/home/<class>__<name>/test/with_other/*       this item AND a look-alike in view (a real search, any layout)
 Videos are sampled at --fps frames per second.
 
 Rows (one per test frame and searched-for item, best box by fused score):
     alone frames:       searched for its own item -> positive; for each look-alike item -> negative (it isn't there)
-    with_other frames:  own item's refs vs left boxes -> positive; vs right boxes (the look-alike) -> negative
+    with_other frames:  searched for its own item -> positive only (best box; both items are there, so no
+                        negative: wrong-item errors are measured on alone frames and reference photos)
 
     .venv/Scripts/python ml/eval_home.py          evaluate with the current models/verifier_fusion.json
     .venv/Scripts/python ml/eval_home.py --fit    refit fusion + thresholds on these photos, save, re-evaluate
@@ -102,15 +103,11 @@ def evaluate(home, detector, names, verifier, fps=2, with_other=True):
                 if img is None:
                     continue
                 q = Coach()(img, now=0.0)  # fresh coach: every frame judged alone (no shake/blocked history)
-                h, w = img.shape[:2]
                 boxes = [b for b in detector(img) if names[b[0]] == it["cls"] and min(b[4] - b[2], b[5] - b[3]) >= 8]
                 feats = {id(b): verifier.features(img[int(b[3]):int(b[5]), int(b[2]):int(b[4])]) for b in boxes}
-                left = [feats[id(b)] for b in boxes if (b[2] + b[4]) / 2 < w / 2]
-                right = [feats[id(b)] for b in boxes if (b[2] + b[4]) / 2 >= w / 2]
+                pairs = [(name, 1, list(feats.values()))]
                 if setting == "alone":
-                    pairs = [(name, 1, list(feats.values()))] + [(k, 0, list(feats.values())) for k in others]
-                else:
-                    pairs = [(name, 1, left), (name, 0, right)]  # right box = the look-alike, searched as mine
+                    pairs += [(k, 0, list(feats.values())) for k in others]
                 for k, same, fs in pairs:
                     score, c = best(fs, items[k]["refs"])
                     rows.append({"item": name, "setting": setting, "frame": fname, "searched_for": k, "same_item": same,

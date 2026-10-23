@@ -43,7 +43,7 @@ The first script also downloads 50 COCO val images to `data/coco/val50/`, and th
 .venv/Scripts/python server/test_planner.py      # add --live on a machine with Bedrock access
 .venv/Scripts/python server/test_track.py        # tile search, tracker + Kalman, distance bands
 .venv/Scripts/python ml/test_eval_home.py      # evaluation script on a tiny fake home set
-.venv/Scripts/python ml/test_summarize_user_tests.py   # user-test summary + SUS scoring
+.venv/Scripts/python ml/test_summarize_user_tests.py   # user-test summary + Google Form averages
 ```
 
 - `GET /health` returns the OpenCV version and the model name.
@@ -70,7 +70,7 @@ Licences: Ultralytics YOLO is AGPL-3.0. DINOv2 is Apache-2.0.
 
 Put each personal item in `data/home/<class>__<name>/` (class = one of the 12 detector classes, e.g. `keys__house_keys`):
 `ref/` holds the 3–5 registration photos, `test/` holds room photos or videos where that item is the only one of its class,
-and `test/with_other/` holds shots with this item on the **left** half and a look-alike (same class) on the **right** half.
+and `test/with_other/` holds real search shots with this item and a look-alike (same class) both in view.
 Two items of the same class (look-alikes) measure wrong-item errors.
 
 ```
@@ -107,6 +107,6 @@ If an older copy of the server was started by hand on port 8000, stop it first.
 
 ## User tests
 
-Protocol (roles, scripts in EN/FR, 8 counterbalanced trials per volunteer, SUS questionnaire): [eval/test_protocol.md](eval/test_protocol.md).
-Consent form: [eval/consent_form.md](eval/consent_form.md). Fill `eval/user_trials.csv` and `eval/sus.csv` during the
-sessions, then `.venv/Scripts/python ml/summarize_user_tests.py` writes `eval/user_tests_summary.md`.
+Protocol (setup, 4 rounds per volunteer, A baseline vs B FindMine × normal vs low light): [eval/test_protocol.md](eval/test_protocol.md).
+Google Form content: [eval/consent_form.md](eval/consent_form.md). Fill `eval/user_trials.csv` during the tests, save the
+form export as `eval/form_responses.csv`, then `.venv/Scripts/python ml/summarize_user_tests.py`.

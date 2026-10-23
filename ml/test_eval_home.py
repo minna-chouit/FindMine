@@ -1,5 +1,5 @@
 """eval_home on a tiny fake home set made of two different COCO cups, each a look-alike of the other:
-alone photos + a short video, one "with_other" photo (mine left, other right), then a --fit calibration.
+alone photos + a short video, one "with_other" photo (both cups in view), then a --fit calibration.
 
 Run from the repo root:  .venv/Scripts/python ml/test_eval_home.py
 """
@@ -35,7 +35,7 @@ with tempfile.TemporaryDirectory() as home:
     for _ in range(10):  # 1 s video of my cup's room
         vid.write(mine)
     vid.release()
-    side = cv.hconcat([mine, cv.resize(other, (mine.shape[1], mine.shape[0]))])  # mine left, look-alike right
+    side = cv.hconcat([cv.resize(other, (mine.shape[1], mine.shape[0])), mine])  # both cups in view, any layout
     cv.imwrite(f"{home}/cup__mine/test/with_other/both.jpg", side)
 
     rows = evaluate(home, det, names, ver, fps=10)
@@ -48,13 +48,13 @@ own = [r for r in rows if r["same_item"]]
 cross = [r for r in rows if not r["same_item"]]
 assert {(r["item"], r["setting"]) for r in own} == {("cup__mine", "alone"), ("cup__mine", "with_other"),
                                                      ("cup__other", "alone")}
-assert len(own) == 13 and len(cross) == 13, (len(own), len(cross))   # 11 + 1 + 1 frames each way
-both = {r["same_item"]: r for r in rows if r["setting"] == "with_other"}
-assert both[1]["match"] > both[0]["match"], both                     # my (left) cup beats the look-alike (right)
+assert len(own) == 13 and len(cross) == 12, (len(own), len(cross))   # with_other frame: positive only
+both = [r for r in rows if r["setting"] == "with_other"]
+assert len(both) == 1 and both[0]["same_item"] and both[0]["match"] >= 0.8, both   # my cup found among the two
 assert all(r["detected"] and r["emb"] > 0 for r in own)
 
 print(summary(rows, 0.8, 0.5).encode("ascii", "replace").decode())
-assert all(r["match"] < 0.8 for r in cross) and "0 of 13 |" in summary(rows, 0.8, 0.5)
+assert all(r["match"] < 0.8 for r in cross) and "0 of 12 |" in summary(rows, 0.8, 0.5)
 
 with tempfile.TemporaryDirectory() as tmp:
     eval_home.FUSION = Path(tmp) / "fusion.json"                     # never touch the real calibration here

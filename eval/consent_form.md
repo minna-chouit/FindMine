@@ -1,29 +1,16 @@
-# FindMine user test: consent form / Formulaire de consentement
+# Google Form: "FindMine test"
 
-**Project:** FindMine, a phone app that helps blind and low-vision people find their own belongings
-(OpenCV AI Competition 2026). **Team:** Minet Ellah Chouit, Takoua Hidoussi.
+One short form, filled in right after the test (blindfold off). Answers in `eval/form_responses.csv`.
 
-**What you will do:** wear a blindfold and use a phone to find objects on a table, about 8 times, up to 2 minutes
-each, then answer a short questionnaire. About 25 minutes in total. A team member stays next to you the whole time.
+1. **Name** (short answer, required). Only for us, never published.
+2. **I agree to take part, and I know I can stop at any time.** (checkbox, required)
+3. **Photos / videos of me** (multiple choice, required): No · Hands only · Face OK · Face OK and can be posted on social media
+4. **The spoken instructions were clear.** (1–5)
+5. **The beeps and vibration helped me move my hand to the item.** (1–5)
+6. **I felt safe and comfortable moving around blindfolded with the app.** (1–5)
+7. **When the app said "found" or asked "is it yours?", I trusted it.** (1–5)
+8. **Finding the item was easy.** (1–5)
+9. **What helped you the most?** (short answer)
+10. **What was confusing or annoying?** (short answer)
 
-**Ce que vous ferez :** porter un bandeau et utiliser un téléphone pour trouver des objets sur une table, environ
-8 fois, 2 minutes maximum chacune, puis répondre à un court questionnaire. Environ 25 minutes. Un membre de l'équipe
-reste à côté de vous tout le temps.
-
-- I take part voluntarily and can stop at any time without giving a reason. / Je participe volontairement et je peux arrêter à tout moment sans justification.
-- My name is not recorded with my results (I am "P__"). / Mon nom n'est pas associé à mes résultats (je suis « P__ »).
-- Times, answers and anonymous quotes may appear in the competition report and video. / Les temps, réponses et citations anonymes peuvent apparaître dans le rapport et la vidéo du concours.
-
-Tick one / Cochez une case:
-
-- [ ] No video. / Pas de vidéo.
-- [ ] Video of my **hands only** may be used. / Une vidéo de **mes mains seulement** peut être utilisée.
-- [ ] Video where my **face** may appear may be used. / Une vidéo où **mon visage** peut apparaître peut être utilisée.
-
-And separately / Et séparément :
-
-- [ ] Photos or videos of me (as ticked above) may also be posted on the team's social media (LinkedIn, Instagram, TikTok). / Les photos ou vidéos de moi (selon le choix ci-dessus) peuvent aussi être publiées sur les réseaux sociaux de l'équipe (LinkedIn, Instagram, TikTok).
-
-Participant code / Code : P____  Date: ________
-
-Signature: ______________________
+Scales: 1 = not at all, 5 = completely.
