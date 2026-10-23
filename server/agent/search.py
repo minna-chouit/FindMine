@@ -22,7 +22,7 @@ VERIFY_FRAMES = 3     # median confidence over this many candidate frames before
 CONFIRM_SECS = 10     # no answer to "is it yours?" -> back to scanning
 REJECT_SECS = 10      # after "no", don't ask again for this long
 LOST_SECS = 3         # target out of view this long while guiding -> back to scanning
-STUCK_SECS = 20       # no candidate this long -> planner event (F6.3)
+STUCK_SECS = 20       # no promising candidate (conf >= ASK) this long -> planner event (F6.3), repeats
 COACH_STUCK_SECS = 8  # bad frames this long -> planner event
 GIVE_UP_SECS = 120    # whole search -> NOT_FOUND
 REPEAT_SECS = 4       # same spoken coach fix at most this often (F4.2)
@@ -67,11 +67,10 @@ def log_trace(record):
 class Search:
     def __init__(self, item, last_seen=None, now=None, trace=log_trace):
         self.item, self.last_seen, self.trace = item, last_seen, trace
-        self.t0 = self.since = self.last_candidate = time.monotonic() if now is None else now
+        self.t0 = self.since = self.last_candidate = self.last_promising = time.monotonic() if now is None else now
         self.state, self.resume = "SCAN", "SCAN"  # resume = state to go back to after COACH
         self.confs, self.target, self.reject_until = [], None, 0.0
         self.spoken = {}  # coach fix -> last time spoken
-        self.stuck_sent = False
 
     # --- per frame -------------------------------------------------------------------------
     def step(self, quality, candidates=(), now=None):
@@ -118,6 +117,8 @@ class Search:
                 self._go(self.resume, now)
             if best is not None and now >= self.reject_until:
                 self.last_candidate = now
+                if best["conf"] >= ASK:            # weak boxes of the class must not hide that we're stuck
+                    self.last_promising = now
                 if self.state == "SCAN":
                     self._go("CANDIDATE", now)
                 self.confs.append(best["conf"])
@@ -135,9 +136,9 @@ class Search:
                     acts.append(say("not_found", item=self.item, last_seen=ls))
                     acts.append({"type": "planner", "event": "not_found"})
                     self._go("NOT_FOUND", now)
-                elif now - self.last_candidate > STUCK_SECS and not self.stuck_sent:
-                    why = "no candidate for 20 s"
-                    self.stuck_sent = True
+                elif now - self.last_promising > STUCK_SECS:
+                    why = f"no promising candidate for {STUCK_SECS} s"
+                    self.last_promising = now      # ask again in another STUCK_SECS if still stuck
                     acts += [say("turn"), {"type": "planner", "event": "no_candidate"}]
 
         self._trace(now, before, quality, candidates, why, acts)
@@ -186,7 +187,7 @@ class Search:
         if state == self.state:
             return
         if state == "SCAN":                                # fresh start: forget old evidence, restart timers
-            self.confs, self.last_candidate, self.stuck_sent = [], now, False
+            self.confs, self.last_candidate = [], now
         self.state, self.since = state, now
 
     def _trace(self, now, before, quality, candidates, why, acts):
@@ -194,5 +195,6 @@ class Search:
             return                                        # nothing happened: don't log every frame
         self.trace({"t": round(now - self.t0, 3), "item": self.item, "from": before, "to": self.state,
                     "observation": {"issue": quality.get("issue"),
-                                    "candidates": [round(c["conf"], 3) for c in candidates]},
+                                    "candidates": [round(c["conf"], 3) for c in candidates],
+                                    "cues_emb_geom_colour": [c.get("cues") for c in candidates]},
                     "decision": why, "actions": [a.get("key") or a["type"] for a in acts]})

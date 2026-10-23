@@ -143,7 +143,7 @@ async def frames(sock: WebSocket):
             # ponytail: detection + verification block the event loop; fine for one phone, move to a
             # worker thread with its own nets per client if we serve several
             n_frames += 1
-            dets, match = detector(img), {}
+            dets, match, cues = detector(img), {}, {}
             h, w = img.shape[:2]
             if search:
                 mine = [d for d in dets if target is None or d[0] == target]
@@ -163,10 +163,12 @@ async def frames(sock: WebSocket):
                         if baseline:      # any box of the class counts as "found" (no instance check)
                             match[id(d)] = 1.0
                         elif refs and min(crop.shape[:2]) >= 8:
-                            match[id(d)] = round(verifier(verifier.features(crop), refs), 3)
+                            cues[id(d)] = [round(float(x), 3) for x in verifier.cues(verifier.features(crop), refs)]
+                            match[id(d)] = round(verifier.fuse(cues[id(d)]), 3)
                         if id(d) in match:
                             candidates.append({"box": [x1 / w, y1 / h, x2 / w, y2 / h], "conf": match[id(d)],
-                                               "px": d[2:], "cls": names[c], "distance": distance(names[c], d[2:], w)[0]})
+                                               "px": d[2:], "cls": names[c], "distance": distance(names[c], d[2:], w)[0],
+                                               "cues": cues.get(id(d))})
                 best_match = max([best_match] + [c["conf"] for c in candidates])
                 acts = search.step(q, candidates)
                 if search.state != "GUIDE":
