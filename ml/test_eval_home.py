@@ -40,6 +40,10 @@ with tempfile.TemporaryDirectory() as home:
 
     rows = evaluate(home, det, names, ver, fps=10)
 
+ref_rows = [r for r in rows if r["setting"] == "ref"]   # each ref photo vs the item's other refs / the look-alike's
+assert len(ref_rows) == 8 and all(r["match"] > s["match"] for r in ref_rows if r["same_item"]
+                                  for s in ref_rows if not s["same_item"] and s["item"] == r["item"]), ref_rows
+rows_all, rows = rows, [r for r in rows if r["setting"] != "ref"]
 own = [r for r in rows if r["same_item"]]
 cross = [r for r in rows if not r["same_item"]]
 assert {(r["item"], r["setting"]) for r in own} == {("cup__mine", "alone"), ("cup__mine", "with_other"),
@@ -54,11 +58,11 @@ assert all(r["match"] < 0.8 for r in cross) and "0 of 13 |" in summary(rows, 0.8
 
 with tempfile.TemporaryDirectory() as tmp:
     eval_home.FUSION = Path(tmp) / "fusion.json"                     # never touch the real calibration here
-    thetas, found, ask = fit(rows)
+    thetas, found, ask = fit(rows_all)
     saved = json.loads(eval_home.FUSION.read_text())
 assert saved["found"] == found and saved["ask"] == ask and len(saved["thetas"]) == 4 and 0.5 <= found <= 0.95
 ver.w = thetas
-refit = [(r["same_item"], ver.fuse([r["emb"], r["geom"], r["colour"]])) for r in rows]
+refit = [(r["same_item"], ver.fuse([r["emb"], r["geom"], r["colour"]])) for r in rows_all]
 assert all(s < found for same, s in refit if not same), refit           # no look-alike reaches "found"
 print(f"fit: found {found}, ask {ask}")
 print("EVAL HOME TEST PASSED")

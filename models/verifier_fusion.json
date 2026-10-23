@@ -1,14 +1,16 @@
 {
  "thetas": [
-  -3.878904342651367,
-  2.862060785293579,
-  3.503361940383911,
-  1.7647709846496582
+  -1.8060355186462402,
+  1.7302513122558594,
+  0.5707126259803772,
+  1.0226812362670898
  ],
  "cues": [
   "embedding",
   "geometry",
   "colour"
  ],
- "fitted_on": "proxy COCO val50, dinov2"
+ "found": 0.62,
+ "ask": 0.48,
+ "fitted_on": "FindMine-Home 2026-10-23: 81 positive, 69 look-alike rows; found raised from 0.55 to 0.62 by hand: 0 of 75 look-alikes above it (max 0.593)"
 }

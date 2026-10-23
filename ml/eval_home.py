@@ -29,13 +29,14 @@ import numpy as np
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "server"))
 from pipeline.coach import Coach  # noqa: E402
-from pipeline.detect import Detector  # noqa: E402
+from pipeline.detect import Detector, crop_to_item  # noqa: E402
 from pipeline.verify import FUSION, Verifier  # noqa: E402
 
 IMG = {".jpg", ".jpeg", ".png"}
 VID = {".mp4", ".mov", ".avi", ".mkv", ".3gp", ".webm"}
 FOUND_PRECISION, ASK_PRECISION = 0.95, 0.70   # plan: choose thresholds by precision on our data
 MIN_FOUND, MIN_ASK = 0.5, 0.3                 # floors: few look-alikes make low thresholds look "precise"
+ALIASES = {"headphones": "earbuds", "earphones": "earbuds", "mug": "cup", "backpack": "bag", "handbag": "bag"}
 
 
 def thresholds():
@@ -61,16 +62,21 @@ def frames(folder, fps):
             cap.release()
 
 
-def evaluate(home, detector, names, verifier, fps=2):
-    """-> list of row dicts with per-cue scores of the best box (by current fusion)."""
+def evaluate(home, detector, names, verifier, fps=2, with_other=True):
+    """-> list of row dicts with per-cue scores of the best box (by current fusion).
+    Also "ref" rows: each reference photo against the item's other references (positive) and against each
+    look-alike's references (negative): clean labels, close-up views."""
     if not Path(home).is_dir():
         raise SystemExit(f"{home} not found: create data/home/<class>__<name>/ref and /test (see the top of this file)")
     items = {}
     for d in sorted(p for p in Path(home).iterdir() if p.is_dir() and "__" in p.name):
         cls = d.name.split("__")[0]
+        cls = ALIASES.get(cls, cls)
         if cls not in names:
-            raise SystemExit(f"{d.name}: class '{cls}' is not one of {names}")
-        refs = [verifier.features(cv.imread(str(p))) for p in sorted((d / "ref").glob("*")) if p.suffix.lower() in IMG]
+            print(f"skipping {d.name}: '{cls}' is not a detector class ({', '.join(names)})")
+            continue
+        refs = [verifier.features(crop_to_item(cv.imread(str(p)), detector, names.index(cls)))
+                for p in sorted((d / "ref").glob("*")) if p.suffix.lower() in IMG]
         items[d.name] = {"cls": cls, "refs": refs, "dir": d}
 
     def best(feats, refs):
@@ -81,13 +87,21 @@ def evaluate(home, detector, names, verifier, fps=2):
     rows = []
     for name, it in items.items():
         others = [k for k, o in items.items() if o["cls"] == it["cls"] and k != name]
-        coach = Coach()
-        for setting in ("alone", "with_other"):
+        for i, f in enumerate(it["refs"]):
+            rest = it["refs"][:i] + it["refs"][i + 1:]
+            for k, same, refs in [(name, 1, rest)] + [(k, 0, items[k]["refs"]) for k in others]:
+                if refs:
+                    c = verifier.cues(f, refs)
+                    rows.append({"item": name, "setting": "ref", "frame": f"ref#{i}", "searched_for": k, "same_item": same,
+                                 "coach_issue": "", "detected": 1, "det_conf": 1.0, "emb": round(float(c[0]), 4),
+                                 "geom": round(float(c[1]), 4), "colour": round(float(c[2]), 4),
+                                 "match": round(verifier.fuse(c), 3)})
+        for setting in ("alone", "with_other") if with_other else ("alone",):
             folder = it["dir"] / "test" / ("" if setting == "alone" else "with_other")
             for fname, img in frames(folder, fps):
                 if img is None:
                     continue
-                q = coach(img, now=0.0)  # every frame judged alone (no shake/blocked history)
+                q = Coach()(img, now=0.0)  # fresh coach: every frame judged alone (no shake/blocked history)
                 h, w = img.shape[:2]
                 boxes = [b for b in detector(img) if names[b[0]] == it["cls"] and min(b[4] - b[2], b[5] - b[3]) >= 8]
                 feats = {id(b): verifier.features(img[int(b[3]):int(b[5]), int(b[2]):int(b[4])]) for b in boxes}
@@ -190,10 +204,11 @@ def main():
     ap.add_argument("--model", default=str(ROOT / "models/findmine12.onnx"))
     ap.add_argument("--out", default=str(ROOT / "eval"))
     ap.add_argument("--fit", action="store_true", help="refit fusion weights + thresholds on these photos")
+    ap.add_argument("--no-with-other", action="store_true", help="ignore test/with_other (e.g. left/right rule not kept)")
     a = ap.parse_args()
     names = json.loads(Path(a.model).with_suffix(".json").read_text())
     verifier = Verifier(ROOT / "models/dinov2_vits14.onnx")
-    rows = evaluate(a.home, Detector(a.model), names, verifier, a.fps)
+    rows = evaluate(a.home, Detector(a.model), names, verifier, a.fps, with_other=not a.no_with_other)
     if not rows:
         raise SystemExit(f"no test frames found under {a.home}")
     note = ""

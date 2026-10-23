@@ -6,11 +6,9 @@ import asyncio
 import html
 import json
 import logging
-import os
 import time
 import uuid
 from collections import deque
-from pathlib import Path
 
 import cv2 as cv
 import numpy as np
@@ -21,19 +19,15 @@ from fastapi.responses import HTMLResponse
 from agent.planner import plan
 from agent.search import Search, log_trace
 from pipeline.coach import FIX, Coach
-from pipeline.detect import Detector
 from pipeline.guide import distance
 from pipeline.track import Track
-from register import load_refs, router as register_router, table, verifier
+from pipeline.models import MODEL, detector, names, verifier
+from register import load_refs, router as register_router, table
 
-ROOT = Path(__file__).resolve().parent.parent
-MODEL = Path(os.getenv("FINDMINE_MODEL", ROOT / "models/findmine12.onnx"))
 MAX_VERIFY = 2  # verify at most this many boxes per frame (DINOv2 is ~110 ms per crop on a laptop)
 TILE_EVERY = 3  # while scanning with no box of the item's class, tile-search every Nth frame (4x detect cost)
 
 log = logging.getLogger("uvicorn.error")
-detector = Detector(str(MODEL))
-names = json.loads(MODEL.with_suffix(".json").read_text())
 log.info("OpenCV %s | model %s (%d classes)", cv.__version__, MODEL.name, len(names))
 
 app = FastAPI()

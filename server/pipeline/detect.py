@@ -59,3 +59,15 @@ class Detector:
         keep = cv.dnn.NMSBoxesBatched([[x1, y1, x2 - x1, y2 - y1] for _, _, x1, y1, x2, y2 in dets],
                                       [d[1] for d in dets], [d[0] for d in dets], self.conf, self.iou)
         return [dets[i] for i in np.array(keep).flatten()]
+
+
+def crop_to_item(bgr, detector, cls, pad=0.1):
+    """Reference photo -> crop around the most confident box of class cls (+pad margin), so it matches the
+    tight live crops it is compared with. Whole photo when nothing is found (e.g. the item fills the frame)."""
+    boxes = [d for d in detector(bgr) if d[0] == cls]
+    if not boxes:
+        return bgr
+    _, _, x1, y1, x2, y2 = max(boxes, key=lambda d: d[1])
+    h, w = bgr.shape[:2]
+    px, py = (x2 - x1) * pad, (y2 - y1) * pad
+    return bgr[int(max(0, y1 - py)):int(min(h, y2 + py)), int(max(0, x1 - px)):int(min(w, x2 + px))]
