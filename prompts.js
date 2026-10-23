@@ -20,6 +20,7 @@
     en: {
       // App
       welcome:          { short: "FindMine ready.", detailed: "FindMine is ready. Say: find my keys." },
+      disclaimer:       "FindMine helps you find your objects. It is not a navigation or mobility aid.",
       camera_on:        { short: "Camera on.", detailed: "Camera is on. Move the phone slowly around the room." },
       camera_blocked:   "I can’t use the camera. Please allow camera access.",
       server_lost:      { short: "Connection lost.", detailed: "Connection lost. Trying again." },
@@ -78,6 +79,7 @@
     // ───────────────────────── FRANÇAIS ─────────────────────────
     fr: {
       welcome:          { short: "FindMine prêt.", detailed: "FindMine est prêt. Dites : trouve mes clés." },
+      disclaimer:       "FindMine vous aide à retrouver vos objets. Ce n’est pas une aide à la navigation ni à la mobilité.",
       camera_on:        { short: "Caméra activée.", detailed: "La caméra est activée. Bougez le téléphone lentement autour de la pièce." },
       camera_blocked:   "Je ne peux pas utiliser la caméra. Autorisez l’accès à la caméra.",
       server_lost:      { short: "Connexion perdue.", detailed: "Connexion perdue. Je réessaie." },
@@ -131,6 +133,7 @@
     // ───────────────────── العربية الفصحى ─────────────────────
     ar: {
       welcome:          { short: "التطبيق جاهز.", detailed: "التطبيق جاهز. قل: ابحث عن مفاتيحي." },
+      disclaimer:       "يساعدك FindMine على العثور على أغراضك. وهو ليس أداة للتنقل أو للمساعدة على الحركة.",
       camera_on:        { short: "الكاميرا تعمل.", detailed: "الكاميرا تعمل. حرّك الهاتف ببطء في أرجاء الغرفة." },
       camera_blocked:   "لا أستطيع استخدام الكاميرا. اسمح بالوصول إلى الكاميرا.",
       server_lost:      { short: "انقطع الاتصال.", detailed: "انقطع الاتصال. أحاول مرة أخرى." },
@@ -185,6 +188,7 @@
     // Please review: natural Darija differs by region.
     dz: {
       welcome:          { short: "FindMine واجد.", detailed: "FindMine واجد. قول: وين السوارت تاعي." },
+      disclaimer:       "FindMine يعاونك تلقى الحوايج تاعك. ماشي باش يوجهك في الطريق ولا يعاونك في المشي.",
       camera_on:        { short: "الكاميرا راهي خدامة.", detailed: "الكاميرا راهي خدامة. دوّر التيليفون بالشوية في البيت." },
       camera_blocked:   "ما نقدرش نستعمل الكاميرا. عطيني البيرميسيون تاع الكاميرا.",
       server_lost:      { short: "الكونيكسيون طاحت.", detailed: "الكونيكسيون طاحت. راني نعاود." },
@@ -249,6 +253,7 @@
 
   let lang = load("findmine-lang", "en");
   let verbosity = load("findmine-verbosity", "detailed");
+  let mode = load("findmine-mode", "full");        // "full" or "baseline" (test condition A)
   if (!PROMPTS[lang]) lang = "en";
 
   function raw(key, l) {
@@ -309,5 +314,59 @@
     get verbosity() { return verbosity; },
     setLang(l) { if (PROMPTS[l]) { lang = l; store("findmine-lang", l); } },
     setVerbosity(v) { if (v === "short" || v === "detailed") { verbosity = v; store("findmine-verbosity", v); } },
+    get mode() { return mode; },
+    setMode(m) { if (m === "full" || m === "baseline") { mode = m; store("findmine-mode", m); } },
+    // Extra fields for the /ws "start" message, e.g. { mode: "baseline" }
+    startExtras() { return mode === "baseline" ? { mode: "baseline" } : {}; },
+    showDisclaimer,
   };
+
+  // ───── First-open disclaimer ─────
+  // Browsers only allow speech after a tap, so the first screen is one big "tap anywhere" button.
+  function showDisclaimer(force) {
+    if (!force && load("findmine-disclaimer-seen", "") === "1") return;
+    if (document.getElementById("fm-disclaimer")) return;
+    const info = LANG_INFO[lang];
+    const box = document.createElement("button");
+    box.id = "fm-disclaimer";
+    box.type = "button";
+    box.dir = info.dir;
+    box.setAttribute("aria-label", t("disclaimer") + " " + tapLabel());
+    box.style.cssText = "position:fixed;inset:0;z-index:9999;border:0;margin:0;width:100%;height:100%;" +
+      "display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;" +
+      "padding:calc(env(safe-area-inset-top,0px) + 24px) 28px calc(env(safe-area-inset-bottom,0px) + 24px);" +
+      "background:#0d1b2a;color:#ffffff;font:700 1.6rem/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;" +
+      "text-align:center;cursor:pointer;";
+    box.innerHTML = '<span style="font-size:3rem" aria-hidden="true">🔎</span>' +
+      '<span></span><span style="font-size:1.1rem;font-weight:400;opacity:.85"></span>';
+    box.children[1].textContent = t("disclaimer");
+    box.children[2].textContent = tapLabel();
+    let spoken = false;
+    box.addEventListener("click", () => {
+      store("findmine-disclaimer-seen", "1");
+      if (!spoken && "speechSynthesis" in window) {
+        spoken = true;
+        const u = new SpeechSynthesisUtterance(t("disclaimer"));
+        u.lang = info.tts;
+        const v = pickVoice(info.tts); if (v) u.voice = v;
+        u.onend = () => box.remove();
+        u.onerror = () => box.remove();
+        speechSynthesis.cancel();
+        speechSynthesis.speak(u);
+        box.children[2].textContent = "";
+        setTimeout(() => box.remove(), 9000);       // safety: never stay stuck
+      } else {
+        speechSynthesis.cancel();
+        box.remove();                                // second tap skips
+      }
+    });
+    document.body.appendChild(box);
+    box.focus();
+  }
+  function tapLabel() {
+    return { en: "Tap anywhere to continue.", fr: "Touchez l’écran pour continuer.",
+             ar: "المس الشاشة للمتابعة.", dz: "اضغط على الشاشة باش تكمل." }[lang];
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => showDisclaimer());
+  else showDisclaimer();
 })();
