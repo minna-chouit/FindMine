@@ -42,3 +42,20 @@ class Detector:
                          float(np.clip(x, 0, w)), float(np.clip(y, 0, h)),
                          float(np.clip(x + bw, 0, w)), float(np.clip(y + bh, 0, h))))
         return dets
+
+    def tiles(self, bgr, grid=2, overlap=0.2):
+        """Tile search (F3.4): detect on grid x grid overlapping crops, each upscaled to the input size,
+        so small objects (keys, earbuds) get more pixels. Costs grid^2 detections."""
+        h, w = bgr.shape[:2]
+        th, tw = int(h / grid * (1 + overlap)), int(w / grid * (1 + overlap))
+        dets = []
+        for gy in range(grid):
+            for gx in range(grid):
+                y0, x0 = min(int(gy * h / grid), h - th), min(int(gx * w / grid), w - tw)
+                dets += [(c, p, x1 + x0, y1 + y0, x2 + x0, y2 + y0)
+                         for c, p, x1, y1, x2, y2 in self(bgr[y0:y0 + th, x0:x0 + tw])]
+        if not dets:
+            return []
+        keep = cv.dnn.NMSBoxesBatched([[x1, y1, x2 - x1, y2 - y1] for _, _, x1, y1, x2, y2 in dets],
+                                      [d[1] for d in dets], [d[0] for d in dets], self.conf, self.iou)
+        return [dets[i] for i in np.array(keep).flatten()]

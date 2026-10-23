@@ -41,6 +41,9 @@ The first script also downloads 50 COCO val images to `data/coco/val50/`, and th
 .venv/Scripts/python server/test_server.py
 .venv/Scripts/python server/test_search_e2e.py   # whole search over /ws, AWS faked in memory
 .venv/Scripts/python server/test_planner.py      # add --live on a machine with Bedrock access
+.venv/Scripts/python server/test_track.py        # tile search, tracker + Kalman, distance bands
+.venv/Scripts/python ml/test_eval_home.py      # evaluation script on a tiny fake home set
+.venv/Scripts/python ml/test_summarize_user_tests.py   # user-test summary + SUS scoring
 ```
 
 - `GET /health` returns the OpenCV version and the model name.
@@ -49,18 +52,31 @@ The first script also downloads 50 COCO val images to `data/coco/val50/`, and th
   - bad frame (camera coach): `{"quality": {"issue": "blur|dark|bright|shake|blocked", ...}, "fix": {"en", "fr", "ar"}}`, with no detection
   - not a JPEG: `{"error": "..."}`
 - Search (text messages on the same `/ws`):
-  - `{"type": "start", "item_id": "..."}` starts searching for a registered item. Frames then also get `"match"` (0–1) on boxes of the item's class.
+  - `{"type": "start", "item_id": "..."}` starts searching for a registered item. Frames then also get `"match"` (0–1) on boxes of the item's class. While scanning with no box of that class, every 3rd frame is also searched in 2×2 zoomed tiles (small objects).
+  - `"mode": "baseline"` in `start` turns off the "is it mine?" check (any box of the class counts as found): condition A of the user tests.
   - `{"type": "answer", "answer": "yes" | "no" | "got_it"}`: reply to "is it yours?", or the item is in hand.
   - `{"type": "stop"}`
   - Every reply has `"state"` (`SCAN`, `COACH`, `CANDIDATE`, `CONFIRM`, `GUIDE`, `FOUND`, `NOT_FOUND`, or `null` with no search) and `"actions"`:
     `{"type": "speak", "key", "text": {"en", "fr", "ar"}}`, `{"type": "ask_user", "options": ["yes", "no"]}`,
-    `{"type": "guide", "cx", "cy", "size", "clock"}` (0–1 coordinates, every frame in `GUIDE`), `{"type": "planner", "event"}`, `{"type": "save_last_seen"}`.
+    `{"type": "guide", "cx", "cy", "size", "clock", "distance": "near"|"arm"|"far"}` (0–1 coordinates, every frame in `GUIDE`, Kalman-smoothed; a CSRT tracker fills frames the detector misses), `{"type": "planner", "event"}`, `{"type": "save_last_seen"}`.
   - "found" is only spoken at match ≥ 0.8 or after the user says yes (`server/agent/search.py`).
 - Planner (`server/agent/planner.py`): when the search is stuck (no candidate for 20 s, bad frames for 8 s, not found), the server asks Claude Haiku 4.5 on Bedrock (`FINDMINE_PLANNER_MODEL`, default `us.anthropic.claude-haiku-4-5-20251001-v1:0`, us-east-1) for the next step: `speak`, `set_torch` (phone action `{"type": "torch", "on"}`) or `ask_user`. The server needs `bedrock:InvokeModel` (IAM role on EC2). If Bedrock fails, the fixed phrase is all the user hears. `start` may pass `"lang"` (`en`, `fr`, `ar`) and its reply carries `"session"`.
 - `GET /trace/<session>` replays a search: what OpenCV saw, each decision, and the planner's tool calls (`/trace` lists the last 50 sessions, `.json` for raw records).
 - `FINDMINE_MODEL` sets the ONNX path (default `models/findmine12.onnx`, our 12 classes; `models/yolo11n.onnx` is the stock 80-class COCO model; the class names come from the `.json` file next to it).
 
 Licences: Ultralytics YOLO is AGPL-3.0. DINOv2 is Apache-2.0.
+
+## Evaluate on our own items
+
+Put each personal item in `data/home/<class>__<name>/` (class = one of the 12 detector classes, e.g. `keys__house_keys`):
+`ref/` holds the 3–5 registration photos, `test/` holds room photos or videos where that item is visible.
+Two items of the same class (look-alikes) measure wrong-item errors.
+
+```
+.venv/Scripts/python ml/eval_home.py
+```
+
+It writes `eval/home_results.csv` (one row per frame and item) and `eval/home_summary.md` (per-item detection and decisions, precision/recall at the *found* and *ask* thresholds).
 
 ## Deploy on AWS (one command)
 
@@ -83,3 +99,9 @@ git clone https://github.com/minna-chouit/FindMine.git && cd FindMine && bash in
 It ends with `DEPLOYED: https://<ip>.sslip.io`. The phone app connects to `wss://<ip>.sslip.io/ws`; the PWA pages are served from `app/`.
 Logs: `sudo journalctl -u findmine -f`. Stop the instance when nobody is testing (budget is $0).
 If an older copy of the server was started by hand on port 8000, stop it first.
+
+## User tests
+
+Protocol (roles, scripts in EN/FR, 8 counterbalanced trials per volunteer, SUS questionnaire): [eval/test_protocol.md](eval/test_protocol.md).
+Consent form: [eval/consent_form.md](eval/consent_form.md). Fill `eval/user_trials.csv` and `eval/sus.csv` during the
+sessions, then `.venv/Scripts/python ml/summarize_user_tests.py` writes `eval/user_tests_summary.md`.

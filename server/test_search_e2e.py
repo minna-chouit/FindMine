@@ -67,6 +67,8 @@ replies, last, session = asyncio.run(search(MINE))
 said = [a.get("key") or a["type"] for r in replies for a in r["actions"]]
 print("mine:", [r["state"] for r in replies], said, [d.get("match") for d in replies[-1]["detections"]])
 assert "found" in said and replies[-1]["state"] == "GUIDE", replies[-1]
+guide = [a for a in replies[-1]["actions"] if a["type"] == "guide"]   # last frame followed by the tracker
+assert guide and guide[0]["distance"] in ("near", "arm", "far"), replies[-1]
 assert last["state"] == "FOUND" and "save_last_seen" in [a["type"] for a in last["actions"]]
 assert "last_seen" in main.table.items["cup1"]
 
@@ -89,6 +91,23 @@ async def dark_room():
             await asyncio.sleep(0.1)
         return out
 
+
+
+
+async def baseline(photo):
+    async with websockets.connect("ws://127.0.0.1:8766/ws") as ws:
+        await ws.send(json.dumps({"type": "start", "item_id": "cup1", "mode": "baseline"}))
+        json.loads(await ws.recv())
+        out = []
+        for _ in range(3):
+            await ws.send(photo.read_bytes())
+            out.append(json.loads(await ws.recv()))
+        return out
+
+
+# Baseline (user-test condition A) announces ANY cup, including someone else's: that's the point of the comparison.
+said = [a.get("key") for r in asyncio.run(baseline(OTHER)) for a in r["actions"]]
+assert "found" in said, said
 
 acts = [a for r in asyncio.run(dark_room()) for a in r["actions"]]
 assert {"type": "torch", "on": True} in acts and any(a.get("key") == "fix_dark" for a in acts), acts

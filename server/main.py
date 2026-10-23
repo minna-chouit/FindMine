@@ -22,11 +22,14 @@ from agent.planner import plan
 from agent.search import Search, log_trace
 from pipeline.coach import FIX, Coach
 from pipeline.detect import Detector
+from pipeline.guide import distance
+from pipeline.track import Track
 from register import load_refs, router as register_router, table, verifier
 
 ROOT = Path(__file__).resolve().parent.parent
 MODEL = Path(os.getenv("FINDMINE_MODEL", ROOT / "models/findmine12.onnx"))
 MAX_VERIFY = 2  # verify at most this many boxes per frame (DINOv2 is ~110 ms per crop on a laptop)
+TILE_EVERY = 3  # while scanning with no box of the item's class, tile-search every Nth frame (4x detect cost)
 
 log = logging.getLogger("uvicorn.error")
 detector = Detector(str(MODEL))
@@ -106,8 +109,8 @@ async def frames(sock: WebSocket):
     Every reply has "state" (null when no search) and "actions" (things to speak, ask or guide).
     """
     await sock.accept()
-    coach, search, item, refs, target, lang = Coach(), None, None, [], None, "en"
-    q, best_match, torch = {}, 0.0, False
+    coach, search, item, refs, target, lang, baseline = Coach(), None, None, [], None, "en", False
+    q, best_match, torch, track, n_frames = {}, 0.0, False, None, 0
     session = uuid.uuid4().hex[:8]
     while True:
         msg = await sock.receive()
@@ -122,6 +125,7 @@ async def frames(sock: WebSocket):
                     refs = load_refs(item["item_id"])
                     target = names.index(item["class"]) if item.get("class") in names else None  # None = any class
                     lang, best_match = cmd.get("lang", "en"), 0.0
+                    baseline = cmd.get("mode") == "baseline"  # user tests, condition A: class only, like other apps
                     search = Search(item["name"], last_seen=item.get("last_seen"), trace=tracer(session, item["item_id"]))
                     reply["session"] = session
                 else:
@@ -138,20 +142,44 @@ async def frames(sock: WebSocket):
         else:
             # ponytail: detection + verification block the event loop; fine for one phone, move to a
             # worker thread with its own nets per client if we serve several
-            dets = detector(img)
+            n_frames += 1
+            dets, match = detector(img), {}
             h, w = img.shape[:2]
-            out = [{"label": names[c], "conf": round(p, 3), "box": [round(v) for v in box]} for c, p, *box in dets]
             if search:
+                mine = [d for d in dets if target is None or d[0] == target]
+                if not mine and search.state == "SCAN" and n_frames % TILE_EVERY == 0:
+                    mine = [d for d in detector.tiles(img) if target is None or d[0] == target]  # small objects
+                    dets = dets + mine
                 candidates = []
-                mine = sorted((d for d in zip(dets, out) if target is None or d[0][0] == target),
-                              key=lambda d: -d[0][1])[:MAX_VERIFY]
-                for (_, _, x1, y1, x2, y2), o in mine:
-                    crop = img[int(y1):int(y2), int(x1):int(x2)]
-                    if refs and min(crop.shape[:2]) >= 8:
-                        o["match"] = round(verifier(verifier.features(crop), refs), 3)
-                        candidates.append({"box": [x1 / w, y1 / h, x2 / w, y2 / h], "conf": o["match"]})
+                if track and search.state == "GUIDE":  # confirmed: follow it, no need to re-verify
+                    box = track.update(img, track.match([d[2:] for d in mine]))
+                    if box:
+                        candidates = [{"box": [box[0] / w, box[1] / h, box[2] / w, box[3] / h], "conf": track.conf,
+                                       "distance": distance(track.cls, box, w)[0]}]
+                else:
+                    for d in sorted(mine, key=lambda d: -d[1])[:MAX_VERIFY]:
+                        c, _, x1, y1, x2, y2 = d
+                        crop = img[int(y1):int(y2), int(x1):int(x2)]
+                        if baseline:      # any box of the class counts as "found" (no instance check)
+                            match[id(d)] = 1.0
+                        elif refs and min(crop.shape[:2]) >= 8:
+                            match[id(d)] = round(verifier(verifier.features(crop), refs), 3)
+                        if id(d) in match:
+                            candidates.append({"box": [x1 / w, y1 / h, x2 / w, y2 / h], "conf": match[id(d)],
+                                               "px": d[2:], "cls": names[c], "distance": distance(names[c], d[2:], w)[0]})
                 best_match = max([best_match] + [c["conf"] for c in candidates])
                 acts = search.step(q, candidates)
+                if search.state != "GUIDE":
+                    track = None
+                elif track is None and candidates:
+                    best = max(candidates, key=lambda c: c["conf"])
+                    track = Track(img, best["px"])
+                    track.conf, track.cls = best["conf"], best["cls"]
+            out = []
+            for d in dets:
+                c, p, *box = d
+                out.append({"label": names[c], "conf": round(p, 3), "box": [round(v) for v in box]}
+                           | ({"match": match[id(d)]} if id(d) in match else {}))
             reply = {"quality": q, "w": w, "h": h, "detections": out}
         for ev in [a for a in acts if a["type"] == "planner"]:
             obs = {"event": ev["event"], "lang": lang, "item": item["name"], "state": search.state,
