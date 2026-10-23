@@ -51,7 +51,7 @@
   </div>
 
   <p id="items">Loading your items…</p>
-  <p><a href="./register.html">Register a new item</a> · <a href="./">Camera page</a></p>
+  <p><a href="./register.html">Register a new item</a> · <a href="./">← Home</a></p>
 </main>
 
 <script>
@@ -154,7 +154,7 @@
     if (!it) return answer(L.unknown + items.map((i) => i.name).join(", ") + ".");
     try { localStorage.setItem("findmine-target", JSON.stringify(it)); } catch (e) {}
     answer(L.searching(it.name));
-    // Day 8: hand over to the camera search here, e.g. location.href = "./?find=" + it.item_id;
+    setTimeout(() => { location.href = "./search.html?item=" + encodeURIComponent(it.item_id); }, 1800);
   }
 
   async function loadItems() {
