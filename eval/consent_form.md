@@ -20,6 +20,10 @@ Tick one / Cochez une case:
 - [ ] Video of my **hands only** may be used. / Une vidéo de **mes mains seulement** peut être utilisée.
 - [ ] Video where my **face** may appear may be used. / Une vidéo où **mon visage** peut apparaître peut être utilisée.
 
+And separately / Et séparément :
+
+- [ ] Photos or videos of me (as ticked above) may also be posted on the team's social media (LinkedIn, Instagram, TikTok). / Les photos ou vidéos de moi (selon le choix ci-dessus) peuvent aussi être publiées sur les réseaux sociaux de l'équipe (LinkedIn, Instagram, TikTok).
+
 Participant code / Code : P____  Date: ________
 
 Signature: ______________________

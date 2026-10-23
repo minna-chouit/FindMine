@@ -75,6 +75,15 @@ acts = s.step(OK, now=121.0)
 assert keys(acts) == ["not_found", "planner"] and s.state == "NOT_FOUND"
 assert "kitchen, 14:02" in acts[0]["text"]["en"]
 
+# A weak box of the class keeps appearing (bottle seen, never close to a match): the user must not be left in
+# silence. Seen on the real server (session 0b36fbe0): SCAN <-> CANDIDATE every ~1.2 s for 25 s, nothing said.
+s, _ = new()
+events = []
+for i in range(1, 251):                     # 50 s at 5 fps
+    acts = s.step(OK, [{"box": BOX, "conf": 0.22}], now=i * 0.2)
+    events += [i * 0.2 for a in acts if a["type"] == "planner"]
+assert len(events) == 2 and 20 < events[0] < 21 and 40 < events[1] < 42, events
+
 # Safety fuzz: confidences below FOUND and random "no"/silence never produce "found".
 rng = random.Random(0)
 for _ in range(200):
