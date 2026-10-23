@@ -21,7 +21,7 @@
                 background:var(--bg); color:var(--fg); cursor:pointer; }
   .row button[aria-pressed="true"] { background:var(--btn); color:var(--btn-fg); border-color:var(--btn); }
   button:focus-visible { outline:4px solid #ffd400; outline-offset:3px; }
-  #voice { color:var(--muted); min-height:1.4em; }
+  #voice, .note { color:var(--muted); min-height:1.4em; }
   .scroll { overflow-x:auto; margin-top:8px; }
   table { border-collapse:collapse; width:100%; min-width:720px; font-size:.95rem; }
   th, td { border-bottom:1px solid var(--line); padding:8px 6px; text-align:start; vertical-align:top; }
@@ -46,6 +46,16 @@
     <button data-vb="detailed">Detailed</button>
   </div>
 
+  <h2>Test mode</h2>
+  <div class="row two">
+    <button data-mode="full">Full app</button>
+    <button data-mode="baseline">Baseline (test A)</button>
+  </div>
+  <p id="modeNote" class="note"></p>
+
+  <h2>Safety notice</h2>
+  <div class="row two"><button id="replay">Play the notice again</button></div>
+
   <h2>All sentences (tap ▶ to listen)</h2>
   <div class="scroll"><table id="table"></table></div>
 
@@ -60,6 +70,10 @@
   function refresh() {
     document.querySelectorAll("[data-l]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.l === FM.lang)));
     document.querySelectorAll("[data-vb]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.vb === FM.verbosity)));
+    document.querySelectorAll("[data-mode]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === FM.mode)));
+    document.getElementById("modeNote").textContent = FM.mode === "baseline"
+      ? "Baseline is ON: searches send mode \"baseline\" (test condition A)."
+      : "Normal app. Switch to Baseline only for user tests, condition A.";
     const name = FM.LANG_INFO[FM.lang].name;
     document.getElementById("voice").textContent = FM.hasVoice()
       ? "Voice for " + name + " found on this phone ✓"
@@ -92,6 +106,10 @@
   document.querySelectorAll("[data-vb]").forEach((b) => b.addEventListener("click", () => {
     FM.setVerbosity(b.dataset.vb); refresh(); FM.say("searching", SAMPLE, { interrupt: true });
   }));
+  document.querySelectorAll("[data-mode]").forEach((b) => b.addEventListener("click", () => {
+    FM.setMode(b.dataset.mode); refresh();
+  }));
+  document.getElementById("replay").addEventListener("click", () => FM.showDisclaimer(true));
   document.getElementById("table").addEventListener("click", (e) => {
     const b = e.target.closest("[data-k]"); if (!b) return;
     FM.say(b.dataset.k, SAMPLE, { lang: b.dataset.pl, interrupt: true });
