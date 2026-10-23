@@ -69,7 +69,8 @@ Licences: Ultralytics YOLO is AGPL-3.0. DINOv2 is Apache-2.0.
 ## Evaluate on our own items
 
 Put each personal item in `data/home/<class>__<name>/` (class = one of the 12 detector classes, e.g. `keys__house_keys`):
-`ref/` holds the 3–5 registration photos, `test/` holds room photos or videos where that item is visible.
+`ref/` holds the 3–5 registration photos, `test/` holds room photos or videos where that item is the only one of its class,
+and `test/with_other/` holds shots with this item on the **left** half and a look-alike (same class) on the **right** half.
 Two items of the same class (look-alikes) measure wrong-item errors.
 
 ```
@@ -77,6 +78,10 @@ Two items of the same class (look-alikes) measure wrong-item errors.
 ```
 
 It writes `eval/home_results.csv` (one row per frame and item) and `eval/home_summary.md` (per-item detection and decisions, precision/recall at the *found* and *ask* thresholds).
+
+`--fit` refits the verifier's fusion weights (cv.ml logistic regression on embedding, geometry and colour scores) and picks
+the *found* (precision ≥ 0.95) and *ask* (≥ 0.70) thresholds on these photos, saving them to `models/verifier_fusion.json`.
+The server reads both at start-up: commit the file, then `git pull` and re-run `infra/deploy.sh` on the server.
 
 ## Deploy on AWS (one command)
 
