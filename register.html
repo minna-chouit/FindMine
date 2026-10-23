@@ -39,6 +39,21 @@
   <section id="step-name">
     <label for="name">What is the item?</label>
     <input type="text" id="name" placeholder="my keys" autocomplete="off">
+    <label for="cls" style="margin-top:14px">What type of object is it?</label>
+    <select id="cls" style="width:100%;font-size:1.3rem;padding:14px;border:2px solid var(--line);border-radius:12px;background:var(--bg);color:var(--fg)">
+      <option value="keys">keys</option>
+      <option value="wallet">wallet</option>
+      <option value="phone">phone</option>
+      <option value="glasses">glasses</option>
+      <option value="sunglasses">sunglasses</option>
+      <option value="remote">remote</option>
+      <option value="earbuds">earbuds</option>
+      <option value="medicine">medicine</option>
+      <option value="cup">cup</option>
+      <option value="bottle">bottle</option>
+      <option value="bag">bag</option>
+      <option value="watch">watch</option>
+    </select>
     <button id="begin">Start</button>
   </section>
 
@@ -110,6 +125,7 @@
     try {
       const form = new FormData();
       form.append("name", itemName);
+      form.append("cls", $("cls").value);
       const r = await fetch(SERVER + "/items", { method: "POST", body: form });
       if (!r.ok) throw new Error("server answered " + r.status);
       itemId = (await r.json()).item_id;
