@@ -61,3 +61,25 @@ The first script also downloads 50 COCO val images to `data/coco/val50/`, and th
 - `FINDMINE_MODEL` sets the ONNX path (default `models/findmine12.onnx`, our 12 classes; `models/yolo11n.onnx` is the stock 80-class COCO model; the class names come from the `.json` file next to it).
 
 Licences: Ultralytics YOLO is AGPL-3.0. DINOv2 is Apache-2.0.
+
+## Deploy on AWS (one command)
+
+`infra/deploy.sh` turns a fresh EC2 instance into the running service: system packages, Python venv with the pinned
+requirements, models from S3, a systemd service (starts on boot, restarts on crash), and Caddy for HTTPS on
+`<public-ip-with-dashes>.sslip.io`. Re-run it after every `git pull`.
+
+Once per account (AWS console, us-east-1):
+
+1. **Models to S3:** upload `models/findmine12.onnx` and `models/dinov2_vits14.onnx` to `s3://findmine-items-bucket/models/`.
+2. **IAM role** for the instance with: `s3:GetObject`/`s3:PutObject` on the bucket, `dynamodb:GetItem`/`PutItem`/`UpdateItem`/`Scan` on `findmine-items`, and `bedrock:InvokeModel`.
+3. **Instance:** Ubuntu 24.04 (arm64 for Graviton, e.g. `t4g.medium`/`c7g.large`; x86 `c7i-flex.large` for the baseline), the IAM role above, security group open on 22 (your IP), 80 and 443.
+
+Then on the instance:
+
+```
+git clone https://github.com/minna-chouit/FindMine.git && cd FindMine && bash infra/deploy.sh
+```
+
+It ends with `DEPLOYED: https://<ip>.sslip.io`. The phone app connects to `wss://<ip>.sslip.io/ws`; the PWA pages are served from `app/`.
+Logs: `sudo journalctl -u findmine -f`. Stop the instance when nobody is testing (budget is $0).
+If an older copy of the server was started by hand on port 8000, stop it first.

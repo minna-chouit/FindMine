@@ -1,0 +1,13 @@
+# FindMine: HTTPS in front of the vision service (certificate from Let's Encrypt, automatic).
+# deploy.sh fills in DOMAIN and APP_DIR.
+DOMAIN {
+	encode gzip
+	@api path /ws /health /items /items/* /trace /trace/*
+	handle @api {
+		reverse_proxy 127.0.0.1:8000
+	}
+	handle {
+		root * APP_DIR
+		file_server
+	}
+}
