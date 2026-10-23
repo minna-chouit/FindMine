@@ -43,6 +43,7 @@ The first script also downloads 50 COCO val images to `data/coco/val50/`, and th
 .venv/Scripts/python server/test_planner.py      # add --live on a machine with Bedrock access
 .venv/Scripts/python server/test_track.py        # tile search, tracker + Kalman, distance bands
 .venv/Scripts/python ml/test_eval_home.py      # evaluation script on a tiny fake home set
+.venv/Scripts/python ml/test_summarize_user_tests.py   # user-test summary + SUS scoring
 ```
 
 - `GET /health` returns the OpenCV version and the model name.
@@ -52,6 +53,7 @@ The first script also downloads 50 COCO val images to `data/coco/val50/`, and th
   - not a JPEG: `{"error": "..."}`
 - Search (text messages on the same `/ws`):
   - `{"type": "start", "item_id": "..."}` starts searching for a registered item. Frames then also get `"match"` (0–1) on boxes of the item's class. While scanning with no box of that class, every 3rd frame is also searched in 2×2 zoomed tiles (small objects).
+  - `"mode": "baseline"` in `start` turns off the "is it mine?" check (any box of the class counts as found): condition A of the user tests.
   - `{"type": "answer", "answer": "yes" | "no" | "got_it"}`: reply to "is it yours?", or the item is in hand.
   - `{"type": "stop"}`
   - Every reply has `"state"` (`SCAN`, `COACH`, `CANDIDATE`, `CONFIRM`, `GUIDE`, `FOUND`, `NOT_FOUND`, or `null` with no search) and `"actions"`:
@@ -97,3 +99,9 @@ git clone https://github.com/minna-chouit/FindMine.git && cd FindMine && bash in
 It ends with `DEPLOYED: https://<ip>.sslip.io`. The phone app connects to `wss://<ip>.sslip.io/ws`; the PWA pages are served from `app/`.
 Logs: `sudo journalctl -u findmine -f`. Stop the instance when nobody is testing (budget is $0).
 If an older copy of the server was started by hand on port 8000, stop it first.
+
+## User tests
+
+Protocol (roles, scripts in EN/FR, 8 counterbalanced trials per volunteer, SUS questionnaire): [eval/test_protocol.md](eval/test_protocol.md).
+Consent form: [eval/consent_form.md](eval/consent_form.md). Fill `eval/user_trials.csv` and `eval/sus.csv` during the
+sessions, then `.venv/Scripts/python ml/summarize_user_tests.py` writes `eval/user_tests_summary.md`.

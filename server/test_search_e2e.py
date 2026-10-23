@@ -92,6 +92,23 @@ async def dark_room():
         return out
 
 
+
+
+async def baseline(photo):
+    async with websockets.connect("ws://127.0.0.1:8766/ws") as ws:
+        await ws.send(json.dumps({"type": "start", "item_id": "cup1", "mode": "baseline"}))
+        json.loads(await ws.recv())
+        out = []
+        for _ in range(3):
+            await ws.send(photo.read_bytes())
+            out.append(json.loads(await ws.recv()))
+        return out
+
+
+# Baseline (user-test condition A) announces ANY cup, including someone else's: that's the point of the comparison.
+said = [a.get("key") for r in asyncio.run(baseline(OTHER)) for a in r["actions"]]
+assert "found" in said, said
+
 acts = [a for r in asyncio.run(dark_room()) for a in r["actions"]]
 assert {"type": "torch", "on": True} in acts and any(a.get("key") == "fix_dark" for a in acts), acts
 

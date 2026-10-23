@@ -109,7 +109,7 @@ async def frames(sock: WebSocket):
     Every reply has "state" (null when no search) and "actions" (things to speak, ask or guide).
     """
     await sock.accept()
-    coach, search, item, refs, target, lang = Coach(), None, None, [], None, "en"
+    coach, search, item, refs, target, lang, baseline = Coach(), None, None, [], None, "en", False
     q, best_match, torch, track, n_frames = {}, 0.0, False, None, 0
     session = uuid.uuid4().hex[:8]
     while True:
@@ -125,6 +125,7 @@ async def frames(sock: WebSocket):
                     refs = load_refs(item["item_id"])
                     target = names.index(item["class"]) if item.get("class") in names else None  # None = any class
                     lang, best_match = cmd.get("lang", "en"), 0.0
+                    baseline = cmd.get("mode") == "baseline"  # user tests, condition A: class only, like other apps
                     search = Search(item["name"], last_seen=item.get("last_seen"), trace=tracer(session, item["item_id"]))
                     reply["session"] = session
                 else:
@@ -159,8 +160,11 @@ async def frames(sock: WebSocket):
                     for d in sorted(mine, key=lambda d: -d[1])[:MAX_VERIFY]:
                         c, _, x1, y1, x2, y2 = d
                         crop = img[int(y1):int(y2), int(x1):int(x2)]
-                        if refs and min(crop.shape[:2]) >= 8:
+                        if baseline:      # any box of the class counts as "found" (no instance check)
+                            match[id(d)] = 1.0
+                        elif refs and min(crop.shape[:2]) >= 8:
                             match[id(d)] = round(verifier(verifier.features(crop), refs), 3)
+                        if id(d) in match:
                             candidates.append({"box": [x1 / w, y1 / h, x2 / w, y2 / h], "conf": match[id(d)],
                                                "px": d[2:], "cls": names[c], "distance": distance(names[c], d[2:], w)[0]})
                 best_match = max([best_match] + [c["conf"] for c in candidates])
