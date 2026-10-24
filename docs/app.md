@@ -18,7 +18,7 @@ Everything starts from the home page. No other link is needed.
 | Home | `app/index.html` | Tap anywhere → speaks the safety notice (first time) and a welcome → listens: "find my X" or "register". Big buttons for everything. |
 | Find my item | `app/search.html` | Pick an item (or arrive from voice) → camera → follows the server: speech, Yes/No, stereo beeps, vibration, torch, **Got it** saves where it was found. |
 | Ask by voice | `app/find.html` | "find my keys" in EN / FR / AR (+ some Darija words) → opens the search for that item. |
-| Register an item | `app/register.html` | Name + type + optional training consent → 5 guided, spoken photos (front, back, left, right, top). |
+| Register an item | `app/register.html` | Name (typed or 🎤 spoken) + type + optional training consent → 5 spoken sides (front, back, left, right, top). Photos are taken **automatically** when the picture is good (server camera coach + an object in view), with rising beeps; the button still works. |
 | Settings | `app/settings.html` | Language, short/detailed speech, **text size**, **light/dark**, test mode (baseline = condition A), replay the safety notice, server address (team). |
 | Camera test | `app/tools/camera.html` | Team tool: every box the server sees + round-trip speed. |
 | Guidance test | `app/tools/guide.html` | Team tool: guide to any object type, no registration. |
@@ -34,6 +34,8 @@ Home ──"find my bottle"──▶ Ask by voice ──▶ Find my item
                                               ▼
                      phone: speaks, shows Yes/No, beeps left/right, vibrates, "Got it" → last-seen saved
 ```
+
+Box choice: the detector proposes, the verifier decides. Boxes of the item's class are verified first; if there are none, the top boxes of **any** class are verified too (the detector often names small items wrong, e.g. keys → "phone"). `FINDMINE_ANY_CLASS=0` turns this off; the baseline test mode never uses it.
 
 States: `SCAN → CANDIDATE / CONFIRM → GUIDE → FOUND` (or `COACH` for a bad picture, `NOT_FOUND`). "Found" is only said at match ≥ 0.8 or after the user says yes.
 

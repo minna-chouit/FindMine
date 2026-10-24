@@ -299,7 +299,7 @@
       const color = mine ? (d.match >= 0.8 ? "#2ecc71" : "#ffd400") : "rgba(255,255,255,0.6)";
       ctx.strokeStyle = color;
       ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
-      const label = mine ? d.label + " · match " + Math.round(d.match * 100) + "%" : d.label;
+      const label = mine ? d.label + " · match " + Math.round(d.match * 100) + "%" : d.label + " " + Math.round(d.conf * 100) + "%";
       const tw = ctx.measureText(label).width + 10, ty = Math.max(0, y1 - size - 6);
       ctx.fillStyle = color; ctx.fillRect(x1, ty, tw, size + 6);
       ctx.fillStyle = "#000"; ctx.fillText(label, x1 + 5, ty + size);

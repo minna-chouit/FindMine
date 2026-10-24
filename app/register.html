@@ -14,6 +14,9 @@
 <script src="js/config.js"></script>
 <link rel="stylesheet" href="css/app.css">
 <style>
+  .typed { display:flex; gap:.6rem; align-items:stretch; }
+  .typed input { flex:1; }
+  .typed .btn { width:auto; margin:0; min-width:4.25rem; font-size:1.6rem; }
   #thumbs { display:grid; grid-template-columns:repeat(5,1fr); gap:.5rem; margin-top:1rem; }
   #thumbs div { aspect-ratio:1; border:2px dashed var(--border); border-radius:.8rem; overflow:hidden; background:var(--surface); }
   #thumbs div.done { border:3px solid var(--success); }
@@ -30,7 +33,10 @@
   <section id="step-name">
     <p class="lead">Take 5 photos of your item so FindMine can tell it apart from look-alikes. A sighted helper can do this part.</p>
     <label for="name">What is the item called?</label>
-    <input type="text" id="name" placeholder="my keys" autocomplete="off">
+    <div class="typed">
+      <input type="text" id="name" placeholder="my keys" autocomplete="off">
+      <button id="nameMic" class="btn" type="button" aria-label="Say the name">🎤</button>
+    </div>
     <label for="cls">What type of object is it?</label>
     <select id="cls">
         <option value="keys">keys</option>
@@ -46,12 +52,14 @@
         <option value="bag">bag</option>
         <option value="watch">watch</option>
     </select>
+    <label class="check"><input type="checkbox" id="autoOn" checked> Take the photos automatically when the picture is sharp</label>
     <label class="check"><input type="checkbox" id="trainOk"> Allow FindMine to use these photos to improve the app (optional)</label>
     <button id="begin" class="btn btn-xl">Start</button>
   </section>
 
   <section id="step-photos" class="hidden">
     <p id="prompt" class="said" aria-live="assertive"></p>
+    <p id="autoState" class="big-readout" aria-hidden="true"></p>
     <div class="stage"><video id="video" autoplay playsinline muted aria-label="Camera view"></video></div>
     <button id="shoot" class="btn btn-xl">Take photo</button>
     <div id="thumbs" aria-label="Photos taken"></div>
@@ -64,6 +72,7 @@
 
   <p id="status" class="status" role="status" aria-live="polite"></p>
 </main>
+<script src="js/prompts.js"></script>
 <script>
   const SERVER = FM_SERVER;
   const MAX_WIDTH = 1024;   // bigger than the live camera: more detail for matching
@@ -79,6 +88,13 @@
   const $ = (id) => document.getElementById(id);
   const video = $("video");
   const grab = document.createElement("canvas");
+  const SIDE_KEYS = ["side_front", "side_back", "side_left", "side_right", "side_top"];
+  const AUTO_HINT = {
+    en: "Hold it still. I take the photo by myself.",
+    fr: "Ne bougez plus. Je prends la photo tout seul.",
+    ar: "ثبّت الشيء. سألتقط الصورة بنفسي.",
+    dz: "حبسها شوية. نصوّر وحدي.",
+  };
   let itemId = null, itemName = "", shot = 0, busy = false;
 
   function setStatus(t) { $("status").textContent = t; }
@@ -86,7 +102,9 @@
     if (!("speechSynthesis" in window)) return;
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = "en-US";
+    const tts = FM.LANG_INFO[FM.lang].tts;
+    u.lang = tts;
+    const v = FM.pickVoice(tts); if (v) u.voice = v;
     speechSynthesis.speak(u);
   }
   function show(id) {
@@ -103,8 +121,8 @@
   }
 
   function askForShot() {
-    const text = "Photo " + (shot + 1) + " of " + SHOTS.length + ": " + SHOTS[shot] +
-                 ". Hold the item close so it fills the screen.";
+    const text = FM.t("shot", { n: shot + 1, total: SHOTS.length, side: SIDE_KEYS[shot] }, { verbosity: "detailed" }) +
+                 ($("autoOn").checked ? " " + AUTO_HINT[FM.lang] : "");
     $("prompt").textContent = text;
     say(text);
   }
@@ -141,6 +159,7 @@
     show("step-photos");
     setStatus("");
     askForShot();
+    startAuto();
   }
 
   function capture() {
@@ -167,7 +186,7 @@
 
       if (!data.ok) {
         setStatus(data.message + " (" + data.points + " detail points)");
-        say(data.message);
+        say(FM.t("retake", {}, { verbosity: "detailed" }));
       } else {
         const cell = $("thumbs").children[shot];
         cell.classList.add("done");
@@ -178,7 +197,7 @@
         cell.appendChild(img);
         shot++;
         if (data.done) return finish();
-        setStatus("Photo saved.");
+        setStatus(FM.t("photo_saved"));
         askForShot();
       }
     } catch (e) {
@@ -192,9 +211,10 @@
   }
 
   function finish() {
+    stopAuto();
     if (video.srcObject) video.srcObject.getTracks().forEach((t) => t.stop());
     video.srcObject = null;
-    const text = itemName + " is saved with " + SHOTS.length + " photos.";
+    const text = FM.t("item_saved", { item: itemName, total: SHOTS.length });
     $("prompt").textContent = text;
     setStatus(text);
     say(text);
@@ -211,6 +231,104 @@
     $("name").focus();
   });
   $("name").addEventListener("keydown", (e) => { if (e.key === "Enter") begin(); });
+
+  // ───── Automatic capture ─────
+  // The server's OpenCV camera coach (blur, light, shake, covered lens) runs on a live preview.
+  // When the picture is good and an object fills part of the frame for a moment, the photo is taken.
+  const AUTO_STEADY = 3;          // good frames in a row with an object
+  const AUTO_FALLBACK_MS = 6000;  // good picture but no box (e.g. keys): take it anyway, the server checks detail
+  const AUTO_PAUSE_MS = 4500;     // after a photo: time to hear the next side and turn the item
+  const MIN_AREA = 0.04;          // object box covers at least 4 % of the frame
+  const LANG = FM.lang === "dz" ? "ar" : FM.lang;
+  const autoGrab = document.createElement("canvas");
+  let aws = null, autoOn = false, autoTimer = null, waitingFrame = false;
+  let goodRun = 0, goodSince = 0, pauseUntil = 0, lastFixAt = 0, audioCtx = null;
+
+  function tone(freq, ms) {
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain(), t = audioCtx.currentTime;
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.3, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + ms / 1000);
+      o.connect(g); g.connect(audioCtx.destination); o.start(t); o.stop(t + ms / 1000 + 0.02);
+    } catch (e) {}
+  }
+
+  function startAuto() {
+    if (!$("autoOn").checked) return;
+    autoOn = true;
+    goodRun = 0; goodSince = 0;
+    pauseUntil = performance.now() + AUTO_PAUSE_MS;
+    connectAuto();
+    clearInterval(autoTimer);
+    autoTimer = setInterval(sendAutoFrame, 250);
+  }
+  function stopAuto() {
+    autoOn = false;
+    clearInterval(autoTimer);
+    if (aws) { aws.onclose = null; aws.close(); }
+    aws = null;
+    $("autoState").textContent = "";
+  }
+  function connectAuto() {
+    aws = new WebSocket(FM_WS);
+    aws.onmessage = onAuto;
+    aws.onclose = () => { waitingFrame = false; if (autoOn) setTimeout(connectAuto, 1500); };
+  }
+  function sendAutoFrame() {
+    if (!autoOn || !aws || aws.readyState !== 1 || waitingFrame || busy || !video.videoWidth) return;
+    waitingFrame = true;
+    autoGrab.width = 640;
+    autoGrab.height = Math.round(video.videoHeight * 640 / video.videoWidth);
+    autoGrab.getContext("2d").drawImage(video, 0, 0, autoGrab.width, autoGrab.height);
+    autoGrab.toBlob((b) => { if (b && aws && aws.readyState === 1) aws.send(b); else waitingFrame = false; }, "image/jpeg", 0.7);
+  }
+  function onAuto(e) {
+    waitingFrame = false;
+    const d = JSON.parse(e.data), now = performance.now();
+    if (busy || now < pauseUntil) { goodRun = 0; goodSince = 0; return; }
+    if (d.quality && d.quality.issue) {
+      goodRun = 0; goodSince = 0;
+      $("autoState").textContent = "✋ " + ((d.fix && (d.fix[LANG] || d.fix.en)) || d.quality.issue);
+      if (now - lastFixAt > 4000 && d.fix) { lastFixAt = now; say(d.fix[LANG] || d.fix.en); }
+      return;
+    }
+    if (!d.w) return;
+    const area = Math.max(0, ...(d.detections || []).map((x) => ((x.box[2] - x.box[0]) * (x.box[3] - x.box[1])) / (d.w * d.h)));
+    if (!goodSince) goodSince = now;
+    if (area >= MIN_AREA) { goodRun++; tone(500 + goodRun * 150, 70); } else goodRun = 0;
+    $("autoState").textContent = "📷 " + "●".repeat(Math.min(goodRun, AUTO_STEADY)) + "○".repeat(Math.max(0, AUTO_STEADY - goodRun));
+    if (goodRun >= AUTO_STEADY || now - goodSince > AUTO_FALLBACK_MS) {
+      goodRun = 0; goodSince = 0;
+      tone(1200, 120);
+      shoot().finally(() => { pauseUntil = performance.now() + AUTO_PAUSE_MS; });
+    }
+  }
+  document.addEventListener("visibilitychange", () => { if (document.hidden) stopAuto(); });
+
+  // ───── Say the item's name ─────
+  const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const NAME_OK = { en: "Name: ", fr: "Nom : ", ar: "الاسم: ", dz: "الاسم: " };
+  const NAME_ASK = { en: "Say the item’s name.", fr: "Dites le nom de l’objet.", ar: "قل اسم الشيء.", dz: "قول اسم الحاجة." };
+  if (!Rec) $("nameMic").classList.add("hidden");
+  $("nameMic").addEventListener("click", () => {
+    if (!Rec) return;
+    const r = new Rec();
+    r.lang = FM.LANG_INFO[FM.lang].listen;
+    r.onstart = () => { $("nameMic").classList.add("on"); setStatus(NAME_ASK[FM.lang]); };
+    r.onend = () => $("nameMic").classList.remove("on");
+    r.onerror = (e) => { if (e.error === "language-not-supported" && r.lang === "ar-DZ") { FM.LANG_INFO[FM.lang].listen = "ar-SA"; $("nameMic").click(); } };
+    r.onresult = (e) => {
+      const name = e.results[0][0].transcript.trim();
+      $("name").value = name;
+      setStatus(NAME_OK[FM.lang] + name);
+      say(NAME_OK[FM.lang] + name);
+    };
+    speechSynthesis.cancel();
+    r.start();
+  });
 </script>
 </body>
 </html>

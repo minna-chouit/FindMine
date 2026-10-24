@@ -27,6 +27,7 @@ from pipeline.models import MODEL, detector, names, verifier
 from register import load_refs, router as register_router, table
 
 MAX_VERIFY = 2  # verify at most this many boxes per frame (DINOv2 is ~110 ms per crop on a laptop)
+ANY_CLASS_FALLBACK = os.getenv("FINDMINE_ANY_CLASS", "1") == "1"  # set 0 to verify only boxes of the item's class
 TILE_EVERY = 3  # while scanning with no box of the item's class, tile-search every Nth frame (4x detect cost)
 
 log = logging.getLogger("uvicorn.error")
@@ -156,6 +157,11 @@ async def frames(sock: WebSocket):
                 if not mine and search.state == "SCAN" and n_frames % TILE_EVERY == 0:
                     mine = [d for d in detector.tiles(img) if target is None or d[0] == target]  # small objects
                     dets = dets + mine
+                if not mine and not baseline and ANY_CLASS_FALLBACK:
+                    # Detector proposes, verifier decides: the detector often names small items wrong
+                    # (keys -> "phone"), so with no box of the item's class, verify the top boxes of any class
+                    # against the user's photos. Baseline (test condition A) keeps the class-only rule.
+                    mine = list(dets)
                 candidates = []
                 if track and search.state == "GUIDE":  # confirmed: follow it, no need to re-verify
                     box = track.update(img, track.match([d[2:] for d in mine]))

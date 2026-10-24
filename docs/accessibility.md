@@ -7,9 +7,9 @@ Users: **blind** people (screen reader or no screen at all) and **low-vision** p
 | Who | Search (find my item) | Registration | Overall |
 |---|---|---|---|
 | **Low vision** | ✅ Good | ✅ Good | **Good**: meets AA, colours and text at AAA |
-| **Blind** | ✅ Good: voice in, speech + beeps + vibration out | ⚠️ Needs a helper, or the auto-capture task | **Good for search, not yet independent for setup** |
+| **Blind** | ✅ Good: voice in, speech + beeps + vibration out | ✅ Mostly: name by voice, photos taken automatically, spoken guidance (the type list still needs a tap or a helper) | **Good** |
 
-Requirement F1.1 allows a helper for registration. Planned fix: automatic capture + voice naming (`accessibility-plan`, tasks 2–3).
+Registration can be done independently by voice or with a sighted helper (requirement F1.1). Photos are taken automatically when the server's OpenCV camera coach says the picture is sharp, lit and steady, with rising beeps while it gets ready.
 
 ## What passes
 
@@ -45,7 +45,7 @@ Requirement F1.1 allows a helper for registration. Planned fix: automatic captur
 
 | Gap | Impact | Fix |
 |---|---|---|
-| Registration needs taps | Blind user can't register alone | Auto-capture when the picture is sharp + voice naming |
+| Object type is a list | Needs one tap (or a helper) | Could be guessed from the detector later |
 | Not yet tested with **TalkBack** | Unknown double-speech (TalkBack + app voice) | Day 10 accessibility pass with TalkBack on |
 | Phone may lack an **Arabic voice** | Silent in Arabic | Settings shows a warning + how to install it |
 | **iPhone**: no vibration from the web | Less feedback on iOS | Beeps and speech still work |
