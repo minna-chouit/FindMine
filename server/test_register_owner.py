@@ -17,8 +17,8 @@ class FakeTable:
 
 
 register.table = FakeTable()
-sara = register.create_item(name="Sara - red mug", cls="cup", owner="phoneA")
-register.create_item(name="Amine - keys", cls="keys", owner="phoneB")
+sara = register.create_item(name="Sara - red mug", cls="cup", owner="phoneA", train_ok="false")
+register.create_item(name="Amine - keys", cls="keys", owner="phoneB", train_ok="false")
 assert [i["name"] for i in register.list_items(owner="phoneA")] == ["Sara - red mug"]
 assert [i["name"] for i in register.list_items(owner="phoneB")] == ["Amine - keys"]
 assert register.list_items(owner="phoneC") == []                       # a new phone sees nothing, not Minna's items

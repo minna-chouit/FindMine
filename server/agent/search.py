@@ -26,6 +26,7 @@ STUCK_SECS = 20       # no promising candidate (conf >= ASK) this long -> planne
 COACH_STUCK_SECS = 8  # bad frames this long -> planner event
 GIVE_UP_SECS = 120    # whole search -> NOT_FOUND
 REPEAT_SECS = 4       # same spoken coach fix at most this often (F4.2)
+HINT_SECS = 10        # same hint (usable but blurry/fast frame) at most this often: it must not nag
 
 PHRASES = {
     "found": {"en": "Found your {item} at {clock} o'clock.", "fr": "{item} trouvé à {clock} heures.",
@@ -116,7 +117,7 @@ class Search:
                     acts.append(say("better"))
                 self._go(self.resume, now)
             hint = quality.get("hint")                    # usable frame, but say how to do better (not while guiding)
-            if hint and self.state in ("SCAN", "CANDIDATE") and now - self.spoken.get(hint, -1e9) >= REPEAT_SECS:
+            if hint and self.state in ("SCAN", "CANDIDATE") and now - self.spoken.get(hint, -1e9) >= HINT_SECS:
                 self.spoken[hint] = now
                 acts.append({"type": "speak", "key": "fix_" + hint, "text": quality.get("hint_fix", {})})
             if best is not None and now >= self.reject_until:

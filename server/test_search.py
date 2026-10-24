@@ -67,12 +67,16 @@ assert [t for t in out if "fix_dark" in out[t]] == [0, 4, 8] and s.state == "COA
 assert [t for t in out if "planner" in out[t]] == [9], out   # first frame after 8 s, then not again
 assert keys(s.step({"issue": None, "fixed": "dark"}, now=11.0)) == ["better"] and s.state == "SCAN"
 
-# Hint (blurry but usable frame): fix spoken at most every 4 s, the search keeps going and still finds it.
+# Hint (blurry but usable frame): the search keeps going and still finds it; no hint while guiding.
 s, _ = new()
 BLURRY = {"issue": None, "hint": "blur", "hint_fix": {"en": "Hold the phone still."}}
 out = [keys(s.step(BLURRY, [{"box": BOX, "conf": 0.9}], now=t)) for t in (0.2, 0.4, 0.6)]
 assert out == [["fix_blur"], [], ["found"]] and s.state == "GUIDE", out
-assert keys(s.step(BLURRY, [{"box": BOX, "conf": 0.9}], now=5.0)) == ["guide"]   # no hints while guiding
+assert keys(s.step(BLURRY, [{"box": BOX, "conf": 0.9}], now=5.0)) == ["guide"]
+# ...and while scanning, the same hint at most every HINT_SECS (10 s): it must not nag.
+s, _ = new()
+said = [t / 5 for t in range(1, 151) if "fix_blur" in keys(s.step(BLURRY, now=t / 5))]   # 30 s, nothing in view
+assert said == [0.2, 10.2, 20.2], said
 
 # Nothing seen: planner nudge at 20 s (once), give up at 120 s with last-seen.
 s, _ = new(last_seen="kitchen, 14:02")
