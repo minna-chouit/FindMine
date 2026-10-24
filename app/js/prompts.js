@@ -338,7 +338,7 @@
     box.style.cssText = "position:fixed;inset:0;z-index:9999;border:0;margin:0;width:100%;height:100%;" +
       "display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;" +
       "padding:calc(env(safe-area-inset-top,0px) + 24px) 28px calc(env(safe-area-inset-bottom,0px) + 24px);" +
-      "background:var(--primary,#FFDE7A);color:var(--on-btn,#2B1D0E);font:700 1.6rem/1.4 \"Atkinson Hyperlegible\",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;" +
+      "background:var(--bg,#FFF8EA);color:var(--text,#1E2252);font:700 1.6rem/1.4 \"Atkinson Hyperlegible\",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;" +
       "text-align:center;cursor:pointer;";
     box.innerHTML = '<span style="font-size:3rem" aria-hidden="true">🔎</span>' +
       '<span></span><span style="font-size:1.1rem;font-weight:400;opacity:.85"></span>';

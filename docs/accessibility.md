@@ -16,12 +16,12 @@ Registration can be done independently by voice or with a sighted helper (requir
 | Check | Rule | Result |
 |---|---|---|
 | Text contrast | WCAG 1.4.6 (AAA, 7:1) | ✅ Every pair 7:1 or more, light and dark (table below) |
-| Control borders | WCAG 1.4.11 (3:1) | ✅ 4.8:1 to 8.6:1 |
+| Control borders | WCAG 1.4.11 (3:1) | ✅ 5.4:1 to 7.3:1 |
 | Text size | 1.4.4 resize to 200 % | ✅ All sizes in `rem`; pinch-zoom allowed; in-app **Large** and **Extra large** |
 | Font | — | ✅ Atkinson Hyperlegible, 18 px base, bold buttons |
 | Tap targets | 2.5.8 (AA 24 px), 2.5.5 (AAA 44 px) | ✅ 52–126 px; main actions 84 px and more |
 | Not colour only | 1.4.1 | ✅ States have words (chip, Yes/No, "match 82 %"), not only colours |
-| Keyboard / switch focus | 2.4.7, 2.4.13 | ✅ 4 px ink outline + butter halo on every control |
+| Keyboard / switch focus | 2.4.7, 2.4.13 | ✅ 4 px indigo outline + butter halo on every control |
 | Labels | 1.3.1, 4.1.2 | ✅ Every input has a label; icon-only buttons have `aria-label`; emoji hidden from screen readers |
 | Live updates | 4.1.3 | ✅ Status and answers in `aria-live` regions |
 | Language | 3.1.1 | ✅ `lang` and right-to-left `dir` switch for Arabic |
@@ -33,13 +33,13 @@ Registration can be done independently by voice or with a sighted helper (requir
 
 | Pair | Light | Dark |
 |---|---|---|
-| Text on page | 15.5:1 | 16.4:1 |
-| Secondary text on page | 8.9:1 | 12.2:1 |
-| Text on butter button | 12.4:1 | 11.9:1 |
-| Text on peach button | 12.7:1 | 10.4:1 |
-| Stop / No button | 8.2:1 | 9.2:1 |
-| Yes / Got it button | 7.0:1 | 10.7:1 |
-| Text over the waves | 12.2:1 or more | — (waves are dark) |
+| Text on page | 14.1:1 | 15.9:1 |
+| Secondary text on page | 7.8:1 | 11.3:1 |
+| Text on butter button | 11.4:1 | 10.9:1 |
+| Text on periwinkle button | 11.6:1 | 8.5:1 |
+| Stop / No button | 8.2:1 | 8.4:1 |
+| Yes / Got it button | 7.0:1 | 9.8:1 |
+| Text over the waves | 7.0:1 or more (secondary), 12.2:1 (text) | 7.9:1 or more |
 
 ## Still to do (honest list)
 
@@ -50,7 +50,6 @@ Registration can be done independently by voice or with a sighted helper (requir
 | Phone may lack an **Arabic voice** | Silent in Arabic | Settings shows a warning + how to install it |
 | **iPhone**: no vibration from the web | Less feedback on iOS | Beeps and speech still work |
 | Font loads from Google Fonts | Falls back to system font offline | Fine; could self-host later |
-| Placeholder logo | Looks unfinished | Replace `app/assets/logo.svg` |
 
 ## How to test quickly
 

@@ -48,8 +48,10 @@ app/
   css/app.css          design system (colours, sizes, buttons) – change the look here only
   js/config.js         server address + text size + light/dark, loaded first on every page
   js/prompts.js        every spoken sentence (EN, FR, AR, Darija) + safety notice + test mode
-  assets/logo.svg      PLACEHOLDER – replace with the real logo (same file name)
-  icons/icon-192.png   PLACEHOLDER app icons – replace (same names and sizes)
+  assets/logo.svg      wordmark, indigo ink + yellow sparkle (light theme)
+  assets/logo-dark.svg wordmark, pale ink + yellow sparkle (dark theme)
+  icons/icon.svg       app icon source (f + sparkle on indigo)
+  icons/icon-192.png   app icons, made from icon.svg
   icons/icon-512.png
   manifest.webmanifest sw.js   make it installable
 index.html             (repo root) redirects to app/ for GitHub Pages
@@ -79,22 +81,24 @@ EOF
 sudo systemctl reload caddy
 ```
 
-## Assets to replace
+## Logo and icons
 
 | File | Size | Notes |
 |---|---|---|
-| `app/assets/logo.svg` | vector | Must read on cream `#FFF8EA` **and** butter `#FFDE7A`. Ink `#2B1D0E`. |
-| `app/icons/icon-512.png` | 512×512 | Square, important shapes inside the middle 80 % (Android crops the edges). |
+| `app/assets/logo.svg` | vector | Hand-drawn bubbly wordmark. Indigo `#1E2252`; the sparkle on the second i is always butter `#FFDE7A`. |
+| `app/assets/logo-dark.svg` | vector | Same, with pale ink `#F3F1FF` for dark mode. Pages show it with the `.logo-light` / `.logo-dark` classes. |
+| `app/icons/icon-512.png` | 512×512 | The f + sparkle on indigo, inside the middle 80 % (Android crops the edges). |
 | `app/icons/icon-192.png` | 192×192 | Same design, smaller. |
 
 ## Design tokens
 
 | Token | Light | Dark | Use |
 |---|---|---|---|
-| `--bg` | `#FFF8EA` cream | `#1C150C` | page |
-| `--text` | `#2B1D0E` brown | `#FFF3D4` | all text |
+| `--bg` | `#FFF8EA` cream | `#14162E` | page, tap-to-start screen |
+| `--text` | `#1E2252` indigo | `#F3F1FF` | all text |
 | `--primary` | `#FFDE7A` butter | `#FFD86B` | main buttons |
-| `--secondary` | `#FFDCCB` peach | `#F7C3AD` | second buttons |
+| `--secondary` | `#DCE1FF` periwinkle | `#B7C0FF` | second buttons |
+| `--sparkle` | `#FFDE7A` butter | `#FFDE7A` | the sparkle in the logo |
 | `--danger` / `--success` | `#9B1C12` / `#1E6630` | `#FFAE9F` / `#9EE0AF` | Stop / No, Yes / Got it |
 
-Font: **Atkinson Hyperlegible** (Braille Institute, made for low-vision readers). See `docs/accessibility.md` for the checks.
+Font: **Atkinson Hyperlegible** (Braille Institute, made for low-vision readers) for all UI text; the bubbly lettering is only in the logo. See `docs/accessibility.md` for the checks.

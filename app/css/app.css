@@ -1,41 +1,43 @@
 /* FindMine design system
- * Butter yellow + soft peach on cream, warm brown ink.
+ * Butter yellow + periwinkle on cream, deep indigo ink.
  * Every text colour pair is WCAG AAA (7:1 or more); every control border is 3:1 or more. See docs/accessibility.md.
  * Font: Atkinson Hyperlegible, designed by the Braille Institute for low-vision readers.
+ * The bubbly lettering is only in the logo (assets/logo.svg); all UI text stays Atkinson.
  * Sizes are in rem, so the phone's text-size setting and pinch-zoom both work.
  */
 :root {
   --bg: #FFF8EA;          /* cream page */
   --surface: #FFFDF7;     /* cards */
-  --text: #2B1D0E;        /* warm brown ink   15.5:1 on bg */
-  --text-soft: #5A4224;   /* secondary text   8.9:1 on bg */
-  --border: #7A5A2E;      /* control borders  6.0:1 on bg */
-  --primary: #FFDE7A;     /* butter button    ink 12.4:1 */
-  --secondary: #FFDCCB;   /* peach button     ink 12.7:1 */
-  --on-btn: #2B1D0E;
+  --text: #1E2252;        /* indigo ink       14.1:1 on bg */
+  --text-soft: #454B7A;   /* secondary text   7.8:1 on bg */
+  --border: #5A61A0;      /* control borders  5.4:1 on bg */
+  --primary: #FFDE7A;     /* butter button    ink 11.4:1 */
+  --secondary: #DCE1FF;   /* periwinkle button ink 11.6:1 */
+  --on-btn: #1E2252;
   --danger: #9B1C12;  --on-danger: #FFFFFF;    /* 8.2:1 */
   --success: #1E6630; --on-success: #FFFFFF;   /* 7.0:1 */
   --chip: #FFF0BD;
-  --focus: #2B1D0E;
-  --wave-a: #FFE9A8;      /* butter wave */
-  --wave-b: #FFD6C2;      /* peach wave */
+  --focus: #1E2252;
+  --sparkle: #FFDE7A;     /* the "bling": always butter yellow */
+  --wave-a: #EAEDFF;      /* periwinkle wave */
+  --wave-b: #FFEDB0;      /* butter wave */
   color-scheme: light;
   font-size: 112.5%;      /* 18 px base */
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #1C150C; --surface: #2A1F12; --text: #FFF3D4; --text-soft: #E6D2A6; --border: #CFAE74;
-    --primary: #FFD86B; --secondary: #F7C3AD; --on-btn: #2B1D0E;
-    --danger: #FFAE9F; --on-danger: #2B1D0E; --success: #9EE0AF; --on-success: #2B1D0E;
-    --chip: #3A2C16; --focus: #FFD86B; --wave-a: #3B2D12; --wave-b: #40291F;
+    --bg: #14162E; --surface: #1F2242; --text: #F3F1FF; --text-soft: #C9CCF2; --border: #9AA2E6;
+    --primary: #FFD86B; --secondary: #B7C0FF; --on-btn: #1E2252;
+    --danger: #FFAE9F; --on-danger: #1E2252; --success: #9EE0AF; --on-success: #1E2252;
+    --chip: #2A2E5A; --focus: #FFD86B; --wave-a: #262A52; --wave-b: #3A3420;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #1C150C; --surface: #2A1F12; --text: #FFF3D4; --text-soft: #E6D2A6; --border: #CFAE74;
-  --primary: #FFD86B; --secondary: #F7C3AD; --on-btn: #2B1D0E;
-  --danger: #FFAE9F; --on-danger: #2B1D0E; --success: #9EE0AF; --on-success: #2B1D0E;
-  --chip: #3A2C16; --focus: #FFD86B; --wave-a: #3B2D12; --wave-b: #40291F;
+  --bg: #14162E; --surface: #1F2242; --text: #F3F1FF; --text-soft: #C9CCF2; --border: #9AA2E6;
+  --primary: #FFD86B; --secondary: #B7C0FF; --on-btn: #1E2252;
+  --danger: #FFAE9F; --on-danger: #1E2252; --success: #9EE0AF; --on-success: #1E2252;
+  --chip: #2A2E5A; --focus: #FFD86B; --wave-a: #262A52; --wave-b: #3A3420;
   color-scheme: dark;
 }
 :root[data-text="large"] { font-size: 131.25%; }   /* 21 px */
@@ -81,7 +83,7 @@ a { color: var(--text); text-underline-offset: .2em; text-decoration-thickness: 
 .btn {
   display: flex; align-items: center; justify-content: center; gap: .75rem;
   width: 100%; min-height: 4rem; padding: .75rem 1.25rem; margin: .75rem 0 0;
-  border: 2px solid var(--border); border-radius: 1.25rem;
+  border: 2px solid var(--border); border-radius: 1.5rem;
   background: var(--primary); color: var(--on-btn);
   font: inherit; font-size: 1.3rem; font-weight: 700; line-height: 1.25;
   text-decoration: none; text-align: center; cursor: pointer;
@@ -127,15 +129,21 @@ input[type=text], select {
 .stage video, .stage canvas { display: block; width: 100%; }
 .stage canvas { position: absolute; inset: 0; height: 100%; pointer-events: none; }
 
-/* Full-screen tap-to-start */
+/* Logo: indigo on light, pale on dark (the sparkle is yellow in both) */
+.logo-dark { display: none; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .logo-light { display: none; } :root:not([data-theme="light"]) .logo-dark { display: inline; } }
+:root[data-theme="dark"] .logo-light { display: none; }
+:root[data-theme="dark"] .logo-dark { display: inline; }
+
+/* Full-screen tap-to-start: cream page, indigo writing */
 .cover {
   position: fixed; inset: 0; z-index: 50; width: 100%; height: 100%; margin: 0; border: 0; cursor: pointer;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.25rem;
   padding: calc(env(safe-area-inset-top, 0px) + 2rem) 2rem calc(env(safe-area-inset-bottom, 0px) + 2rem);
-  background: var(--primary); color: var(--on-btn); font: inherit; font-size: 1.8rem; font-weight: 700; text-align: center;
+  background: var(--bg); color: var(--text); font: inherit; font-size: 1.8rem; font-weight: 700; text-align: center;
 }
 .cover small { font-size: 1.15rem; font-weight: 400; }
-.cover img { width: 9rem; height: auto; }
+.cover img { width: min(80vw, 22rem); height: auto; }
 
 .hidden { display: none !important; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

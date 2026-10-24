@@ -16,23 +16,22 @@
 <style>
   .brand { text-align:center; margin: .5rem 0 1.25rem; }
   .brand h1 { margin: 0; }
-  .brand img { width: min(80%, 18rem); height: auto; }
-  :root[data-theme="dark"] .brand img { background: var(--primary); border-radius: 1.25rem; padding: .5rem 1rem; }
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .brand img { background: var(--primary); border-radius: 1.25rem; padding: .5rem 1rem; } }
+  .brand img { width: min(85%, 20rem); height: auto; }
   .heard { text-align:center; min-height:1.5em; }
   .mode { text-align:center; font-weight:700; color: var(--danger); min-height:1.2em; }
 </style>
 </head>
 <body>
 <button id="start" class="cover" type="button">
-  <img src="assets/logo.svg" alt="">
+  <img class="logo-light" src="assets/logo.svg" alt="">
+  <img class="logo-dark" src="assets/logo-dark.svg" alt="">
   <span class="sr-only">FindMine.</span>
   <small id="startHint">Tap anywhere to start.</small>
 </button>
 
 <main class="wrap">
   <div class="brand">
-    <h1><img src="assets/logo.svg" alt="FindMine"></h1>
+    <h1><img class="logo-light" src="assets/logo.svg" alt="FindMine"><img class="logo-dark" src="assets/logo-dark.svg" alt="FindMine"></h1>
     <p class="lead" id="tag">Find your own things, by voice and sound.</p>
   </div>
 
