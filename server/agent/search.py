@@ -115,6 +115,10 @@ class Search:
                 if quality.get("fixed"):
                     acts.append(say("better"))
                 self._go(self.resume, now)
+            hint = quality.get("hint")                    # usable frame, but say how to do better (not while guiding)
+            if hint and self.state in ("SCAN", "CANDIDATE") and now - self.spoken.get(hint, -1e9) >= REPEAT_SECS:
+                self.spoken[hint] = now
+                acts.append({"type": "speak", "key": "fix_" + hint, "text": quality.get("hint_fix", {})})
             if best is not None and now >= self.reject_until:
                 self.last_candidate = now
                 if best["conf"] >= ASK:            # weak boxes of the class must not hide that we're stuck
@@ -194,7 +198,7 @@ class Search:
         if before == self.state and not acts:
             return                                        # nothing happened: don't log every frame
         self.trace({"t": round(now - self.t0, 3), "item": self.item, "from": before, "to": self.state,
-                    "observation": {"issue": quality.get("issue"),
+                    "observation": {"issue": quality.get("issue"), "hint": quality.get("hint"),
                                     "candidates": [round(c["conf"], 3) for c in candidates],
                                     "cues_emb_geom_colour": [c.get("cues") for c in candidates]},
                     "decision": why, "actions": [a.get("key") or a["type"] for a in acts]})

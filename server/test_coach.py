@@ -18,17 +18,28 @@ def issue(frame, coach=None, now=0.0):
     return (coach or Coach())(frame, now)["issue"]
 
 
-assert issue(good) is None
-assert issue(cv.GaussianBlur(good, (0, 0), 6)) == "blur"
+def hint(frame, coach=None, now=0.0):
+    return (coach or Coach())(frame, now)["hint"]
+
+
+assert issue(good) is None and hint(good) is None
+blurry = cv.GaussianBlur(good, (0, 0), 6)
+assert issue(blurry) is None and hint(blurry) == "blur"     # still detected on: say the fix, keep the frame
 assert issue((good * 0.12).astype(np.uint8)) == "dark"
 assert issue(cv.convertScaleAbs(good, alpha=3, beta=120)) == "bright"
 
+moved = cv.warpAffine(good, np.float32([[1, 0, 60], [0, 1, 0]]), (w, h))
 c = Coach()
 c(good, 0.0)
-assert issue(cv.warpAffine(good, np.float32([[1, 0, 60], [0, 1, 0]]), (w, h)), c, 0.2) == "shake"
+r = c(moved, 0.2)
+assert r["issue"] is None and r["hint"] == "shake", r      # fast sweep, sharp frame: hint only
 c = Coach()
 c(good, 0.0)
-assert issue(cv.warpAffine(good, np.float32([[1, 0, 10], [0, 1, 0]]), (w, h)), c, 0.2) is None  # slow sweep is fine
+assert issue(cv.GaussianBlur(moved, (0, 0), 6), c, 0.2) == "shake"   # moving and smeared: skip it
+c = Coach()
+c(good, 0.0)
+r = c(cv.warpAffine(good, np.float32([[1, 0, 10], [0, 1, 0]]), (w, h)), 0.2)
+assert r["issue"] is None and r["hint"] is None, r          # slow sweep is fine
 
 # Finger on the lens: dark, flat, reddish. Dark at first, "blocked" once it lasts >= 1 s, then "fixed".
 finger = np.full_like(good, (20, 30, 70))
