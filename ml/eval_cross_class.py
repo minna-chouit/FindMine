@@ -2,7 +2,7 @@
 class is in view, the server verifies the top MAX_VERIFY boxes of ANY class against the item's photos.
 So every OTHER item's test frame (without a box of the searched item's class) is a negative here.
 
-    .venv/Scripts/python ml/eval_cross_class.py        prints the counts; writes eval/cross_class.md
+    .venv/Scripts/python ml/eval_cross_class.py [--model models/x.onnx]   prints counts; writes eval/cross_class.md
 """
 import json
 import sys
@@ -20,8 +20,8 @@ from pipeline.verify import Verifier  # noqa: E402
 MAX_VERIFY = 2  # same as server/main.py
 
 
-def main(fps=2):
-    model = ROOT / "models/findmine12.onnx"
+def main(model=ROOT / "models/findmine12.onnx", fps=2):
+    model = Path(model)
     names = json.loads(model.with_suffix(".json").read_text())
     detector, verifier = Detector(str(model)), Verifier(ROOT / "models/dinov2_vits14.onnx")
     found, ask = thresholds()
@@ -65,4 +65,7 @@ def main(fps=2):
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--model", default=str(ROOT / "models/findmine12.onnx"))
+    main(ap.parse_args().model)
