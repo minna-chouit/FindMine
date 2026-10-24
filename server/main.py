@@ -6,15 +6,17 @@ import asyncio
 import html
 import json
 import logging
+import os
 import time
 import uuid
 from collections import deque
+from pathlib import Path
 
 import cv2 as cv
 import numpy as np
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
 
 from agent.planner import plan
 from agent.search import Search, log_trace
@@ -40,18 +42,22 @@ def health():
     return {"ok": True, "opencv": cv.__version__, "model": MODEL.name}
 
 
-TRACES = {}  # session -> recent trace records, for the /trace page (in memory; logs keep everything)
+TRACES = {}  # session -> recent trace records, for the /trace page
+TRACE_FILE = Path(os.getenv("FINDMINE_TRACE_FILE", Path(__file__).resolve().parent.parent / "data/traces.jsonl"))
+TRACE_FILE.parent.mkdir(parents=True, exist_ok=True)
 
 
 def tracer(session, item_id):
-    if len(TRACES) >= 50:
+    if len(TRACES) >= 1000:
         TRACES.pop(next(iter(TRACES)))  # oldest session
     records = TRACES[session] = deque(maxlen=1000)
 
     def write(r):
-        r = {**r, "session": session, "item_id": item_id}
+        r = {**r, "session": session, "item_id": item_id, "time": time.strftime("%Y-%m-%dT%H:%M:%S")}
         records.append(r)
         log_trace(r)
+        with open(TRACE_FILE, "a", encoding="utf-8") as f:  # survives restarts; data/ is git-ignored
+            f.write(json.dumps(r, ensure_ascii=False) + "\n")
     return write
 
 
@@ -59,6 +65,12 @@ def tracer(session, item_id):
 def trace_list():
     rows = "".join(f'<li><a href="/trace/{s}">{s}</a> ({len(r)} steps)</li>' for s, r in reversed(TRACES.items()))
     return f'<!doctype html><html lang="en"><title>FindMine traces</title><h1>Search sessions</h1><ul>{rows}</ul></html>'
+
+
+@app.get("/trace/export.jsonl")
+def trace_export():
+    """Every trace record written to TRACE_FILE (one JSON per line), for the user-test analysis."""
+    return FileResponse(TRACE_FILE, media_type="application/x-ndjson") if TRACE_FILE.exists() else HTMLResponse("", 204)
 
 
 @app.get("/trace/{session}.json")
