@@ -11,6 +11,6 @@
   "colour"
  ],
  "found": 0.62,
- "ask": 0.48,
- "fitted_on": "FindMine-Home 2026-10-23: 81 positive, 69 look-alike rows; found raised from 0.55 to 0.62 by hand: 0 of 75 look-alikes above it (max 0.593)"
+ "ask": 0.43,
+ "fitted_on": "FindMine-Home 2026-10-23: 81 positive, 69 look-alike rows; found raised from 0.55 to 0.62 by hand: 0 of 75 look-alikes above it (max 0.593); ask lowered from 0.48 to 0.43 by hand on 2026-10-24 (search frames: precision 0.80 >= the 0.70 target; a plain cup scored 0.44-0.46 live and was never asked about)"
 }

@@ -90,7 +90,8 @@ def trace_page(session: str):
         else:
             what = f"{r['from']} → {r['to']}"
             obs = r["observation"]
-            did = f"picture: {obs['issue'] or 'ok'}; matches: {obs['candidates']} | {r['decision']} | {', '.join(r['actions'])}"
+            pic = obs["issue"] or (f"ok (hint: {obs['hint']})" if obs.get("hint") else "ok")
+            did = f"picture: {pic}; matches: {obs['candidates']} | {r['decision']} | {', '.join(r['actions'])}"
         rows.append(f"<tr><td>{r.get('t', '')}</td><td>{html.escape(what)}</td><td>{html.escape(did)}</td></tr>")
     return ('<!doctype html><html lang="en"><meta name="viewport" content="width=device-width, initial-scale=1">'
             f'<title>Trace {html.escape(session)}</title><style>body{{font:16px system-ui;margin:16px;background:#fff;color:#111}}'
