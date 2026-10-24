@@ -74,6 +74,8 @@
 
 <script>
   const SERVER = "https://54-90-98-230.sslip.io";
+  // Each phone gets its own random id, so testers only see the items they registered themselves.
+  const OWNER = (() => { try { let o = localStorage.getItem("findmine-owner"); if (!o) { o = Math.random().toString(36).slice(2, 12); localStorage.setItem("findmine-owner", o); } return o; } catch (e) { return ""; } })();
   const MAX_WIDTH = 1024;   // bigger than the live camera: more detail for matching
   const QUALITY = 0.9;
   const SHOTS = [
@@ -126,6 +128,7 @@
       const form = new FormData();
       form.append("name", itemName);
       form.append("cls", $("cls").value);
+      form.append("owner", OWNER);
       const r = await fetch(SERVER + "/items", { method: "POST", body: form });
       if (!r.ok) throw new Error("server answered " + r.status);
       itemId = (await r.json()).item_id;
