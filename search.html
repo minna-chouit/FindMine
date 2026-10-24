@@ -74,6 +74,8 @@
 <script src="prompts.js"></script>
 <script>
   const HTTP = "https://54-90-98-230.sslip.io";
+  // Each phone gets its own random id, so testers only see the items they registered themselves.
+  const OWNER = (() => { try { let o = localStorage.getItem("findmine-owner"); if (!o) { o = Math.random().toString(36).slice(2, 12); localStorage.setItem("findmine-owner", o); } return o; } catch (e) { return ""; } })();
   const WS = "wss://54-90-98-230.sslip.io/ws";
   const FPS = 5, WIDTH = 640, QUALITY = 0.7;
 
@@ -202,7 +204,7 @@
   // ---------- Items ----------
   async function loadItems() {
     try {
-      const items = await (await fetch(HTTP + "/items")).json();
+      const items = await (await fetch(HTTP + "/items?owner=" + encodeURIComponent(OWNER))).json();
       if (!items.length) { $("pickMsg").textContent = FM.t("no_items"); return; }
       $("pickMsg").textContent = "What are you looking for?";
       $("items").innerHTML = "";

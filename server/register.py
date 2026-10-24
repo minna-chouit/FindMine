@@ -44,7 +44,7 @@ def _public(item):
 
 
 @router.post("/items")
-def create_item(name: str = Form(...), cls: str = Form("")):
+def create_item(name: str = Form(...), cls: str = Form(""), owner: str = Form("")):
     name = name.strip()
     if not name:
         raise HTTPException(400, "name is empty")
@@ -52,6 +52,7 @@ def create_item(name: str = Form(...), cls: str = Form("")):
         "item_id": uuid.uuid4().hex[:12],
         "name": name,
         "class": cls.strip(),
+        "owner": owner.strip(),  # random id of the phone that registered it
         "n_refs": 0,
         "refs": [],
         "created_at": int(time.time()),
@@ -104,8 +105,9 @@ async def add_photo(item_id: str, photo: UploadFile = File(...)):
 
 
 @router.get("/items")
-def list_items():
-    items = table.scan().get("Items", [])
+def list_items(owner: str = ""):
+    """Items registered from this phone (?owner=<its id>); all items when no owner is given."""
+    items = [i for i in table.scan().get("Items", []) if not owner or i.get("owner") == owner]
     return sorted((_public(i) for i in items), key=lambda i: i["created_at"], reverse=True)
 
 

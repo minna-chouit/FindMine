@@ -56,6 +56,8 @@
 
 <script>
   const SERVER = "https://54-90-98-230.sslip.io";
+  // Each phone gets its own random id, so testers only see the items they registered themselves.
+  const OWNER = (() => { try { let o = localStorage.getItem("findmine-owner"); if (!o) { o = Math.random().toString(36).slice(2, 12); localStorage.setItem("findmine-owner", o); } return o; } catch (e) { return ""; } })();
 
   const LANGS = {
     en: { rec: "en-US", tts: "en-US", mic: "🎤 Tap and speak", listening: "Listening…",
@@ -159,7 +161,7 @@
 
   async function loadItems() {
     try {
-      const r = await fetch(SERVER + "/items");
+      const r = await fetch(SERVER + "/items?owner=" + encodeURIComponent(OWNER));
       items = await r.json();
       $("items").textContent = items.length
         ? "Your items: " + items.map((i) => i.name).join(", ")

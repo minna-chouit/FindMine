@@ -116,5 +116,7 @@ page = urllib.request.urlopen(f"http://127.0.0.1:8766/trace/{session}").read().d
 steps = json.loads(urllib.request.urlopen(f"http://127.0.0.1:8766/trace/{session}.json").read())
 assert [r["to"] for r in steps][-1] == "FOUND" and "GUIDE" in page, steps
 assert any("set_torch" in json.dumps(r) for rs in main.TRACES.values() for r in rs)
+export = urllib.request.urlopen("http://127.0.0.1:8766/trace/export.jsonl").read().decode().splitlines()
+assert any(json.loads(line)["session"] == session for line in export), export[:2]   # all searches saved to file
 server.should_exit = True
 print("E2E SEARCH TEST PASSED")
