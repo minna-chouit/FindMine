@@ -67,6 +67,24 @@ assert [t for t in out if "fix_dark" in out[t]] == [0, 4, 8] and s.state == "COA
 assert [t for t in out if "planner" in out[t]] == [9], out   # first frame after 8 s, then not again
 assert keys(s.step({"issue": None, "fixed": "dark"}, now=11.0)) == ["better"] and s.state == "SCAN"
 
+# Unsure AND far away: "move closer so I can check" (not "is it yours?"), at most every 6 s; once it is
+# near, ask as usual. Sure matches are announced at any distance.
+s, _ = new()
+FAR = {"box": BOX, "conf": 0.5, "distance": "far"}
+out = {t: keys(s.step(OK, [FAR], now=t)) for t in (0.2, 0.4, 0.6, 0.8, 3.0, 6.8)}
+assert out[0.6] == ["closer"] and out[0.8] == out[3.0] == [] and out[6.8] == ["closer"], out
+assert s.state == "CANDIDATE"
+acts = s.step(OK, [{"box": BOX, "conf": 0.5, "distance": "arm"}], now=7.0)   # moved closer: ask right away
+assert keys(acts) == ["ask", "ask_user"] and s.state == "CONFIRM", acts
+s, _ = new()
+for t in (0.2, 0.4, 0.6):
+    acts = s.step(OK, [{"box": [0.5, 0.5, 0.55, 0.56], "conf": 0.5}], now=t)   # no distance: tiny box = far
+assert keys(acts) == ["closer"], acts
+s, _ = new()
+for t in (0.2, 0.4, 0.6):
+    acts = s.step(OK, [{"box": BOX, "conf": 0.9, "distance": "far"}], now=t)
+assert keys(acts) == ["found"], acts
+
 # Hint (blurry but usable frame): the search keeps going and still finds it; no hint while guiding.
 s, _ = new()
 BLURRY = {"issue": None, "hint": "blur", "hint_fix": {"en": "Hold the phone still."}}

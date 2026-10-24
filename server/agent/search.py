@@ -27,6 +27,10 @@ COACH_STUCK_SECS = 8  # bad frames this long -> planner event
 GIVE_UP_SECS = 120    # whole search -> NOT_FOUND
 REPEAT_SECS = 4       # same spoken coach fix at most this often (F4.2)
 HINT_SECS = 10        # same hint (usable but blurry/fast frame) at most this often: it must not nag
+CLOSER_SECS = 6       # "move closer so I can check" at most this often
+SMALL_BOX = 0.15      # no distance estimate: a box narrower AND shorter than this share of the frame = far
+# Why "move closer": on our home photos, "is it MY item?" works up close (AUC 0.91 on close-ups) but not
+# at search distance (0.37), so an unsure candidate that is far away is checked again from nearby first.
 
 PHRASES = {
     "found": {"en": "Found your {item} at {clock} o'clock.", "fr": "{item} trouvé à {clock} heures.",
@@ -34,6 +38,9 @@ PHRASES = {
     "ask": {"en": "I think I see your {item} at {clock} o'clock. Is it yours?",
             "fr": "Je crois voir votre {item} à {clock} heures. Est-ce le vôtre ?",
             "ar": "أظن أنني أرى {item} على الساعة {clock}. هل هو لك؟"},
+    "closer": {"en": "Something like your {item} at {clock} o'clock. Move closer so I can check it's yours.",
+               "fr": "Quelque chose comme votre {item} à {clock} heures. Approchez-vous pour que je vérifie que c'est le vôtre.",
+               "ar": "هناك شيء يشبه {item} على الساعة {clock}. اقترب لأتحقق أنه لك."},
     "guide": {"en": "OK, guiding you.", "fr": "D'accord, je vous guide.", "ar": "حسنا، سأرشدك."},
     "keep_looking": {"en": "OK, I'll keep looking.", "fr": "D'accord, je continue à chercher.",
                      "ar": "حسنا، سأواصل البحث."},
@@ -70,13 +77,13 @@ class Search:
         self.item, self.last_seen, self.trace = item, last_seen, trace
         self.t0 = self.since = self.last_candidate = self.last_promising = time.monotonic() if now is None else now
         self.state, self.resume = "SCAN", "SCAN"  # resume = state to go back to after COACH
-        self.confs, self.target, self.reject_until = [], None, 0.0
+        self.confs, self.target, self.reject_until, self.far = [], None, 0.0, False
         self.spoken = {}  # coach fix -> last time spoken
 
     # --- per frame -------------------------------------------------------------------------
     def step(self, quality, candidates=(), now=None):
-        """quality: coach output. candidates: [{"box": [x1,y1,x2,y2] normalised 0-1, "conf": fused 0-1}]
-        for boxes of the item's class only."""
+        """quality: coach output. candidates: [{"box": [x1,y1,x2,y2] normalised 0-1, "conf": fused 0-1,
+        "distance": "near"|"arm"|"far" (optional)}] for the boxes that were verified."""
         now = time.monotonic() if now is None else now
         before, acts, why = self.state, [], ""
         best = max(candidates, key=lambda c: c["conf"], default=None)
@@ -128,6 +135,8 @@ class Search:
                     self._go("CANDIDATE", now)
                 self.confs.append(best["conf"])
                 self.target = best["box"]
+                self.far = (best["distance"] == "far" if best.get("distance") else
+                            max(best["box"][2] - best["box"][0], best["box"][3] - best["box"][1]) < SMALL_BOX)
                 if len(self.confs) >= VERIFY_FRAMES:
                     why = f"median conf {self._median():.2f}"
                     acts += self._verify(now)
@@ -177,6 +186,12 @@ class Search:
         if conf >= FOUND:
             self._go("GUIDE", now)
             return [say("found", item=self.item, clock=clock(cx))]
+        if conf >= ASK and self.far:                       # unsure AND far: check again from nearby first
+            self._go("CANDIDATE", now)
+            if now - self.spoken.get("closer", -1e9) < CLOSER_SECS:
+                return []
+            self.spoken["closer"] = now
+            return [say("closer", item=self.item, clock=clock(cx))]
         if conf >= ASK:
             self._go("CONFIRM", now)
             return [say("ask", item=self.item, clock=clock(cx)), {"type": "ask_user", "options": ["yes", "no"]}]

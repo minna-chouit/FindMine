@@ -173,7 +173,7 @@
 
   function handleActions(actions) {
     for (const a of actions || []) {
-      if (a.type === "speak") speak(textOf(a.text), ["found", "planner", "ask", "is_this_yours", "confirm"].includes(a.key));
+      if (a.type === "speak") speak(textOf(a.text), ["found", "planner", "ask", "closer", "is_this_yours", "confirm"].includes(a.key));
       else if (a.type === "ask_user") { askOpen = true; $("ask").classList.remove("hidden"); }
       else if (a.type === "guide") onGuide(a);
       else if (a.type === "torch") setTorch(!!a.on);
