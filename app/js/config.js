@@ -13,6 +13,15 @@
   var servedByServer = /\.sslip\.io$/.test(location.hostname) || (location.hostname === "localhost" && location.port === "8000");
   var http = (override || (servedByServer ? location.origin : DEFAULT_SERVER)).replace(/\/$/, "");
   window.FM_SERVER = http;
+
+  // This phone's random id: the server lists only the items registered from this phone.
+  var owner = null;
+  try { owner = localStorage.getItem("findmine-owner"); } catch (e) {}
+  if (!owner) {
+    owner = "p-" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+    try { localStorage.setItem("findmine-owner", owner); } catch (e) {}
+  }
+  window.FM_OWNER = owner;
   window.FM_WS = http.replace(/^http/, "ws") + "/ws";
 
   var root = document.documentElement;

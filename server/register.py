@@ -25,6 +25,7 @@ REGION = os.environ.get("AWS_REGION", "us-east-1")
 BUCKET = os.environ.get("FINDMINE_BUCKET", "findmine-items-bucket")
 TABLE = os.environ.get("FINDMINE_TABLE", "findmine-items")
 MAX_REFS = 5
+SIDES = ("front", "back", "left", "right", "top")  # the 5 guided registration photos
 MIN_POINTS = 20  # fewer SIFT points than this = photo has too little texture
 
 s3 = boto3.client("s3", region_name=REGION)
@@ -44,7 +45,7 @@ def _public(item):
 
 
 @router.post("/items")
-def create_item(name: str = Form(...), cls: str = Form(""), owner: str = Form("")):
+def create_item(name: str = Form(...), cls: str = Form(""), owner: str = Form(""), train_ok: str = Form("false")):
     name = name.strip()
     if not name:
         raise HTTPException(400, "name is empty")
@@ -53,6 +54,8 @@ def create_item(name: str = Form(...), cls: str = Form(""), owner: str = Form(""
         "name": name,
         "class": cls.strip(),
         "owner": owner.strip(),  # random id of the phone that registered it
+        # Consent: may these photos be used to improve the models? Off unless the user ticks the box.
+        "train_ok": train_ok.strip().lower() in ("true", "1", "yes", "on"),
         "n_refs": 0,
         "refs": [],
         "created_at": int(time.time()),
@@ -64,7 +67,7 @@ def create_item(name: str = Form(...), cls: str = Form(""), owner: str = Form(""
 # async on purpose: requests run one at a time on the event loop, so the shared
 # Verifier network is never used by two requests at once.
 @router.post("/items/{item_id}/photos")
-async def add_photo(item_id: str, photo: UploadFile = File(...)):
+async def add_photo(item_id: str, photo: UploadFile = File(...), side: str = Form("")):
     item = table.get_item(Key={"item_id": item_id}).get("Item")
     if not item:
         raise HTTPException(404, "item not found")
@@ -86,17 +89,21 @@ async def add_photo(item_id: str, photo: UploadFile = File(...)):
 
     buf = io.BytesIO()
     np.savez_compressed(buf, **{k: v for k, v in feats.items() if v is not None})
-    jpg_key = f"items/{item_id}/ref{n}.jpg"
-    npz_key = f"items/{item_id}/ref{n}.npz"
-    s3.put_object(Bucket=BUCKET, Key=jpg_key, Body=data, ContentType="image/jpeg")
-    s3.put_object(Bucket=BUCKET, Key=npz_key, Body=buf.getvalue())
+    side = side if side in SIDES else "other"
+    jpg_key = f"items/{item_id}/ref{n}-{side}.jpg"
+    npz_key = f"items/{item_id}/ref{n}-{side}.npz"
+    # Labels travel with every file, so S3 can be browsed or exported without the database.
+    meta = {"item-id": item_id, "class": item.get("class") or "unknown", "side": side,
+            "train-ok": "true" if item.get("train_ok") else "false"}
+    s3.put_object(Bucket=BUCKET, Key=jpg_key, Body=data, ContentType="image/jpeg", Metadata=meta)
+    s3.put_object(Bucket=BUCKET, Key=npz_key, Body=buf.getvalue(), Metadata=meta)
 
     table.update_item(
         Key={"item_id": item_id},
         UpdateExpression="SET refs = list_append(refs, :r), n_refs = n_refs + :one",
         ConditionExpression="n_refs = :n",
         ExpressionAttributeValues={
-            ":r": [{"jpg": jpg_key, "npz": npz_key, "points": n_pts}],
+            ":r": [{"jpg": jpg_key, "npz": npz_key, "points": n_pts, "side": side}],
             ":one": 1,
             ":n": n,
         },

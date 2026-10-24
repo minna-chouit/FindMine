@@ -118,6 +118,7 @@
       const form = new FormData();
       form.append("name", itemName);
       form.append("cls", $("cls").value);
+      form.append("owner", FM_OWNER);
       form.append("train_ok", $("trainOk").checked ? "true" : "false");
       const r = await fetch(SERVER + "/items", { method: "POST", body: form });
       if (!r.ok) throw new Error("server answered " + r.status);

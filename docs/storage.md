@@ -31,6 +31,7 @@ Each file name says **which photo** it is (`ref2-left`), and each file carries *
 | `item_id` (key) | `d55dce134dd0` | |
 | `name` | `my keys` | What the user calls it |
 | `class` | `keys` | One of the 12 detector classes |
+| `owner` | `p-k3j9x2ab1qz4` | Random id of the phone that registered it; each phone only lists its own items |
 | `n_refs` | `5` | Photos saved |
 | `refs` | `[{jpg, npz, points, side}]` | One entry per photo |
 | `train_ok` | `true` | User allowed these photos to improve the models |

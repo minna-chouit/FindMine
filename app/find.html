@@ -150,7 +150,7 @@
 
   async function loadItems() {
     try {
-      const r = await fetch(SERVER + "/items");
+      const r = await fetch(SERVER + "/items?owner=" + encodeURIComponent(FM_OWNER));
       items = await r.json();
       $("items").textContent = items.length
         ? "Your items: " + items.map((i) => i.name).join(", ")

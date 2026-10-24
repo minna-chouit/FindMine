@@ -184,7 +184,7 @@
   // ---------- Items ----------
   async function loadItems() {
     try {
-      const items = await (await fetch(HTTP + "/items")).json();
+      const items = await (await fetch(HTTP + "/items?owner=" + encodeURIComponent(FM_OWNER))).json();
       if (!items.length) { $("pickMsg").textContent = FM.t("no_items"); return; }
       $("pickMsg").textContent = "What are you looking for?";
       $("items").innerHTML = "";
