@@ -2,100 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#1446a0">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="refresh" content="0; url=app/">
 <title>FindMine</title>
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icon-192.png">
-<link rel="apple-touch-icon" href="icon-192.png">
-<style>
-  :root { --bg:#ffffff; --fg:#0d1b2a; --muted:#4a5a6a; --btn:#1446a0; --btn-fg:#ffffff; --soft:#eef3f8; --line:#c9d3dd; color-scheme:light; }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg:#05080d; --fg:#f2f5f8; --muted:#a9b6c3; --btn:#5b8cff; --btn-fg:#05080d; --soft:#111a24; --line:#2a3644; color-scheme:dark; }
-  }
-  * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--fg); font:18px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-         padding:calc(env(safe-area-inset-top,0px) + 16px) 16px calc(env(safe-area-inset-bottom,0px) + 20px); }
-  main { max-width:520px; margin:0 auto; }
-  header { text-align:center; margin:8px 0 22px; }
-  header img { width:84px; height:84px; border-radius:22px; }
-  h1 { font-size:2.1rem; margin:10px 0 2px; letter-spacing:-.01em; }
-  .tag { color:var(--muted); margin:0; }
-  nav { display:grid; gap:12px; }
-  .big { display:flex; align-items:center; gap:16px; min-height:84px; padding:0 22px; border-radius:18px;
-         background:var(--btn); color:var(--btn-fg); text-decoration:none; font-size:1.4rem; font-weight:700; }
-  .big.alt { background:var(--soft); color:var(--fg); border:2px solid var(--line); }
-  .big span[aria-hidden] { font-size:1.8rem; width:2rem; text-align:center; }
-  .big:focus-visible, button:focus-visible, summary:focus-visible { outline:4px solid #ffd400; outline-offset:3px; }
-  #install { display:none; width:100%; min-height:60px; margin-top:18px; font-size:1.15rem; font-weight:700;
-             border:2px dashed var(--line); border-radius:16px; background:none; color:var(--fg); cursor:pointer; }
-  details { margin-top:28px; color:var(--muted); font-size:1rem; }
-  summary { cursor:pointer; padding:6px 0; }
-  details a { display:block; padding:10px 0; color:var(--btn); }
-  .mode { text-align:center; color:#b3261e; font-weight:700; min-height:1.2em; margin-top:14px; }
-</style>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#FFF8EA;color:#2B1D0E;font:1.3rem/1.5 system-ui,sans-serif}a{color:#2B1D0E;font-weight:700}</style>
 </head>
-<body>
-<main>
-  <header>
-    <img src="icon-192.png" alt="">
-    <h1>FindMine</h1>
-    <p class="tag" id="tag">Find your own things, by voice and sound.</p>
-  </header>
-
-  <nav>
-    <a class="big" href="./search.html"><span aria-hidden="true">🔎</span><span id="lFind">Find my item</span></a>
-    <a class="big" href="./find.html"><span aria-hidden="true">🎤</span><span id="lVoice">Ask by voice</span></a>
-    <a class="big alt" href="./register.html"><span aria-hidden="true">📸</span><span id="lReg">Register an item</span></a>
-    <a class="big alt" href="./settings.html"><span aria-hidden="true">⚙️</span><span id="lSet">Settings</span></a>
-  </nav>
-
-  <button id="install">📲 Install FindMine on this phone</button>
-  <p class="mode" id="mode"></p>
-
-  <details>
-    <summary>Team tools</summary>
-    <a href="./camera.html">Camera test (boxes + speed)</a>
-    <a href="./guide.html">Guidance test (any object)</a>
-    <a href="https://54-90-98-230.sslip.io/trace" target="_blank" rel="noopener">Search traces (server)</a>
-    <a href="https://54-90-98-230.sslip.io/health" target="_blank" rel="noopener">Server health</a>
-  </details>
-</main>
-
-<script src="prompts.js"></script>
-<script>
-  const L = {
-    en: { tag: "Find your own things, by voice and sound.", find: "Find my item", voice: "Ask by voice", reg: "Register an item", set: "Settings", install: "📲 Install FindMine on this phone" },
-    fr: { tag: "Retrouvez vos objets, à la voix et au son.", find: "Trouver mon objet", voice: "Demander à la voix", reg: "Enregistrer un objet", set: "Réglages", install: "📲 Installer FindMine sur ce téléphone" },
-    ar: { tag: "اعثر على أغراضك بالصوت.", find: "ابحث عن غرضي", voice: "اسأل بالصوت", reg: "سجّل غرضًا", set: "الإعدادات", install: "📲 ثبّت FindMine على هذا الهاتف" },
-    dz: { tag: "لقى الحوايج تاعك بالصوت.", find: "قلّب على حاجتي", voice: "اسقسي بالصوت", reg: "سجّل حاجة", set: "الإعدادات", install: "📲 ركّب FindMine في التيليفون" },
-  };
-  const l = L[FM.lang] || L.en;
-  document.documentElement.lang = FM.lang === "dz" ? "ar" : FM.lang;
-  document.documentElement.dir = FM.LANG_INFO[FM.lang].dir;
-  document.getElementById("tag").textContent = l.tag;
-  document.getElementById("lFind").textContent = l.find;
-  document.getElementById("lVoice").textContent = l.voice;
-  document.getElementById("lReg").textContent = l.reg;
-  document.getElementById("lSet").textContent = l.set;
-  document.getElementById("install").textContent = l.install;
-  if (FM.mode === "baseline") document.getElementById("mode").textContent = "Baseline mode is ON (test A)";
-
-  // Installable app
-  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
-  let installEvent = null;
-  window.addEventListener("beforeinstallprompt", (e) => {
-    e.preventDefault();
-    installEvent = e;
-    document.getElementById("install").style.display = "block";
-  });
-  document.getElementById("install").addEventListener("click", async () => {
-    if (!installEvent) return;
-    installEvent.prompt();
-    await installEvent.userChoice;
-    installEvent = null;
-    document.getElementById("install").style.display = "none";
-  });
-</script>
-</body>
+<body><p>Opening FindMine… <a href="app/">Tap here if nothing happens</a>.</p></body>
 </html>

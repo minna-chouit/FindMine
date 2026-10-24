@@ -3,73 +3,56 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>FindMine · Guidance</title>
-<style>
-  :root { --bg:#ffffff; --fg:#0d1b2a; --muted:#4a5a6a; --btn:#1446a0; --btn-fg:#ffffff; --stop:#b3261e; --line:#c9d3dd; color-scheme:light; }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg:#05080d; --fg:#f2f5f8; --muted:#a9b6c3; --btn:#5b8cff; --btn-fg:#05080d; --stop:#ff6b60; --line:#2a3644; color-scheme:dark; }
-  }
-  * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--fg); font:18px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-         padding:calc(env(safe-area-inset-top,0px) + 12px) 14px calc(env(safe-area-inset-bottom,0px) + 16px); }
-  main { max-width:640px; margin:0 auto; }
-  h1 { font-size:1.6rem; margin:4px 0 12px; }
-  label { display:block; font-weight:600; margin-bottom:6px; }
-  select { width:100%; font-size:1.2rem; padding:12px; border:2px solid var(--line); border-radius:12px; background:var(--bg); color:var(--fg); }
-  #go { width:100%; min-height:72px; margin-top:12px; font-size:1.4rem; font-weight:700; border:0; border-radius:14px;
-        background:var(--btn); color:var(--btn-fg); cursor:pointer; }
-  #go.on { background:var(--stop); }
-  button:focus-visible, select:focus-visible { outline:4px solid #ffd400; outline-offset:3px; }
-  #direction { font-size:2.2rem; font-weight:800; text-align:center; min-height:1.4em; margin:12px 0 4px; }
-  #status { color:var(--muted); min-height:1.4em; text-align:center; margin:0 0 10px; }
-  #stage { position:relative; }
-  video, canvas { display:block; width:100%; border-radius:10px; }
-  canvas { position:absolute; inset:0; height:100%; pointer-events:none; }
-  .toggles { display:flex; flex-wrap:wrap; gap:14px; margin-top:12px; }
-  .toggles label { display:flex; align-items:center; gap:8px; font-weight:400; }
-  .toggles input { width:22px; height:22px; }
-  a { color:var(--btn); }
-</style>
+<meta name="theme-color" content="#FFDE7A">
+<title>FindMine · Guidance test</title>
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="icon" href="../icons/icon-192.png">
+<link rel="apple-touch-icon" href="../icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<script src="../js/config.js"></script>
+<link rel="stylesheet" href="../css/app.css">
+
 </head>
 <body>
-<main>
-  <h1>Guidance</h1>
+<main class="wrap">
+  <header class="topbar">
+    <a class="back" href="../" aria-label="Home">←</a>
+    <h1>Guidance test</h1>
+  </header>
 
+  <p class="lead">Team tool: guides you to any object type, with no registration.</p>
   <label for="target">What are you looking for?</label>
   <select id="target">
-    <option value="cup">cup</option>
-    <option value="bottle">bottle</option>
-    <option value="cell phone">phone</option>
+    <option value="keys">keys</option>
+    <option value="wallet">wallet</option>
+    <option value="phone">phone</option>
+    <option value="glasses">glasses</option>
+    <option value="sunglasses">sunglasses</option>
     <option value="remote">remote</option>
-    <option value="book">book</option>
-    <option value="scissors">scissors</option>
-    <option value="mouse">mouse</option>
-    <option value="backpack">backpack</option>
-    <option value="handbag">handbag</option>
-    <option value="laptop">laptop</option>
+    <option value="earbuds">earbuds</option>
+    <option value="medicine">medicine</option>
+    <option value="cup">cup</option>
+    <option value="bottle" selected>bottle</option>
+    <option value="bag">bag</option>
+    <option value="watch">watch</option>
   </select>
-
-  <button id="go">Start guiding</button>
-
-  <p id="direction" aria-live="off"></p>
-  <p id="status" role="status" aria-live="polite">Wear headphones for left/right beeps.</p>
-
-  <div id="stage">
-    <video id="video" autoplay playsinline muted></video>
-    <canvas id="overlay"></canvas>
+  <button id="go" class="btn btn-xl">Start guiding</button>
+  <p id="direction" class="big-readout" aria-hidden="true"></p>
+  <p id="status" class="status" role="status" aria-live="polite">Wear headphones for left/right beeps.</p>
+  <div class="stage">
+    <video id="video" autoplay playsinline muted aria-label="Camera view"></video>
+    <canvas id="overlay" aria-hidden="true"></canvas>
   </div>
-
-  <div class="toggles">
-    <label><input type="checkbox" id="optSpeech" checked> Speech</label>
-    <label><input type="checkbox" id="optBeeps" checked> Beeps</label>
-    <label><input type="checkbox" id="optVibrate" checked> Vibration</label>
-  </div>
-  <p><a href="./settings.html">Language and talk settings</a> · <a href="./">← Home</a></p>
+  <label class="check"><input type="checkbox" id="optSpeech" checked> Speech</label>
+  <label class="check"><input type="checkbox" id="optBeeps" checked> Beeps</label>
+  <label class="check"><input type="checkbox" id="optVibrate" checked> Vibration</label>
+  <p class="small"><a href="../settings.html">Language and talk settings</a></p>
 </main>
-
-<script src="prompts.js"></script>
+<script src="../js/prompts.js"></script>
 <script>
-  const SERVER = "wss://54-90-98-230.sslip.io/ws";
+  const SERVER = FM_WS;
   const FPS = 5, WIDTH = 640, QUALITY = 0.7;
   const MIN_CONF = 0.35;
   const FOV_DEG = 65;           // phone camera horizontal view, roughly
@@ -136,7 +119,7 @@
     }
 
     everSeen = true; lostSaid = false; lastSeen = now;
-    const [x, y, w, h] = target.box;
+    const [x1, y1, x2, y2] = target.box; const x = x1, y = y1, w = x2 - x1, h = y2 - y1;  // server sends corners
     const offset = (x + w / 2) / W - 0.5;               // -0.5 (far left) … +0.5 (far right)
     const area = (w * h) / (W * H);
     const band = area > NEAR_AREA ? "near" : area > MID_AREA ? "mid" : "far";
@@ -254,7 +237,7 @@
     ctx.fillStyle = "rgba(255,212,0,0.14)";            // the "straight ahead" zone
     ctx.fillRect(data.w * (0.5 - CENTER), 0, data.w * CENTER * 2, data.h);
     if (!target) return;
-    const [x, y, w, h] = target.box;
+    const [x1, y1, x2, y2] = target.box; const x = x1, y = y1, w = x2 - x1, h = y2 - y1;  // server sends corners
     ctx.lineWidth = Math.max(4, data.w / 120);
     ctx.strokeStyle = "#ffd400";
     ctx.strokeRect(x, y, w, h);

@@ -3,79 +3,69 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FFDE7A">
 <title>FindMine · Register an item</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<script src="js/config.js"></script>
+<link rel="stylesheet" href="css/app.css">
 <style>
-  :root { --bg:#ffffff; --fg:#0d1b2a; --muted:#4a5a6a; --btn:#1446a0; --btn-fg:#ffffff; --ok:#1b7f3a; --line:#c9d3dd; color-scheme:light; }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg:#05080d; --fg:#f2f5f8; --muted:#a9b6c3; --btn:#5b8cff; --btn-fg:#05080d; --ok:#4cd07d; --line:#2a3644; color-scheme:dark; }
-  }
-  * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--fg); font:18px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-         padding:calc(env(safe-area-inset-top,0px) + 12px) 14px calc(env(safe-area-inset-bottom,0px) + 16px); }
-  main { max-width:640px; margin:0 auto; }
-  h1 { font-size:1.6rem; margin:4px 0 12px; }
-  label { display:block; font-size:1.1rem; font-weight:600; margin-bottom:6px; }
-  input[type=text] { width:100%; font-size:1.3rem; padding:14px; border:2px solid var(--line); border-radius:12px;
-                     background:var(--bg); color:var(--fg); }
-  button { width:100%; min-height:72px; font-size:1.4rem; font-weight:700; border:0; border-radius:14px;
-           background:var(--btn); color:var(--btn-fg); cursor:pointer; margin-top:14px; }
-  button:disabled { opacity:.5; }
-  button:focus-visible, input:focus-visible { outline:4px solid #ffd400; outline-offset:3px; }
-  #prompt { font-size:1.35rem; font-weight:700; margin:14px 0 6px; }
-  #status { font-size:1.1rem; min-height:1.5em; color:var(--muted); margin:6px 0 12px; }
-  video { display:block; width:100%; border-radius:10px; background:#000; }
-  #thumbs { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-top:12px; }
-  #thumbs div { aspect-ratio:1; border:2px dashed var(--line); border-radius:8px; overflow:hidden; }
-  #thumbs div.done { border:2px solid var(--ok); }
+  #thumbs { display:grid; grid-template-columns:repeat(5,1fr); gap:.5rem; margin-top:1rem; }
+  #thumbs div { aspect-ratio:1; border:2px dashed var(--border); border-radius:.8rem; overflow:hidden; background:var(--surface); }
+  #thumbs div.done { border:3px solid var(--success); }
   #thumbs img { width:100%; height:100%; object-fit:cover; display:block; }
-  .hidden { display:none; }
-  a { color:var(--btn); }
 </style>
 </head>
 <body>
-<main>
-  <h1>Register an item</h1>
+<main class="wrap">
+  <header class="topbar">
+    <a class="back" href="./" aria-label="Home">←</a>
+    <h1>Register an item</h1>
+  </header>
 
   <section id="step-name">
-    <label for="name">What is the item?</label>
+    <p class="lead">Take 5 photos of your item so FindMine can tell it apart from look-alikes. A sighted helper can do this part.</p>
+    <label for="name">What is the item called?</label>
     <input type="text" id="name" placeholder="my keys" autocomplete="off">
-    <label for="cls" style="margin-top:14px">What type of object is it?</label>
-    <select id="cls" style="width:100%;font-size:1.3rem;padding:14px;border:2px solid var(--line);border-radius:12px;background:var(--bg);color:var(--fg)">
-      <option value="keys">keys</option>
-      <option value="wallet">wallet</option>
-      <option value="phone">phone</option>
-      <option value="glasses">glasses</option>
-      <option value="sunglasses">sunglasses</option>
-      <option value="remote">remote</option>
-      <option value="earbuds">earbuds</option>
-      <option value="medicine">medicine</option>
-      <option value="cup">cup</option>
-      <option value="bottle">bottle</option>
-      <option value="bag">bag</option>
-      <option value="watch">watch</option>
+    <label for="cls">What type of object is it?</label>
+    <select id="cls">
+        <option value="keys">keys</option>
+        <option value="wallet">wallet</option>
+        <option value="phone">phone</option>
+        <option value="glasses">glasses</option>
+        <option value="sunglasses">sunglasses</option>
+        <option value="remote">remote</option>
+        <option value="earbuds">earbuds</option>
+        <option value="medicine">medicine</option>
+        <option value="cup">cup</option>
+        <option value="bottle">bottle</option>
+        <option value="bag">bag</option>
+        <option value="watch">watch</option>
     </select>
-    <button id="begin">Start</button>
+    <label class="check"><input type="checkbox" id="trainOk"> Allow FindMine to use these photos to improve the app (optional)</label>
+    <button id="begin" class="btn btn-xl">Start</button>
   </section>
 
   <section id="step-photos" class="hidden">
-    <p id="prompt" aria-live="assertive"></p>
-    <video id="video" autoplay playsinline muted></video>
-    <button id="shoot">Take photo</button>
-    <div id="thumbs"></div>
+    <p id="prompt" class="said" aria-live="assertive"></p>
+    <div class="stage"><video id="video" autoplay playsinline muted aria-label="Camera view"></video></div>
+    <button id="shoot" class="btn btn-xl">Take photo</button>
+    <div id="thumbs" aria-label="Photos taken"></div>
   </section>
 
   <section id="step-done" class="hidden">
-    <button id="again">Register another item</button>
+    <button id="again" class="btn btn-lg">Register another item</button>
+    <a class="btn btn-lg btn-secondary" href="./search.html">Find an item</a>
   </section>
 
-  <p id="status" role="status" aria-live="polite"></p>
-  <p><a href="./">← Home</a></p>
+  <p id="status" class="status" role="status" aria-live="polite"></p>
 </main>
-
 <script>
-  const SERVER = "https://54-90-98-230.sslip.io";
-  // Each phone gets its own random id, so testers only see the items they registered themselves.
-  const OWNER = (() => { try { let o = localStorage.getItem("findmine-owner"); if (!o) { o = Math.random().toString(36).slice(2, 12); localStorage.setItem("findmine-owner", o); } return o; } catch (e) { return ""; } })();
+  const SERVER = FM_SERVER;
   const MAX_WIDTH = 1024;   // bigger than the live camera: more detail for matching
   const QUALITY = 0.9;
   const SHOTS = [
@@ -128,7 +118,7 @@
       const form = new FormData();
       form.append("name", itemName);
       form.append("cls", $("cls").value);
-      form.append("owner", OWNER);
+      form.append("train_ok", $("trainOk").checked ? "true" : "false");
       const r = await fetch(SERVER + "/items", { method: "POST", body: form });
       if (!r.ok) throw new Error("server answered " + r.status);
       itemId = (await r.json()).item_id;
@@ -169,6 +159,7 @@
       const blob = await capture();
       const form = new FormData();
       form.append("photo", blob, "photo.jpg");
+      form.append("side", ["front", "back", "left", "right", "top"][shot] || "");
       const r = await fetch(SERVER + "/items/" + itemId + "/photos", { method: "POST", body: form });
       const data = await r.json();
       if (!r.ok) throw new Error(data.detail || ("server answered " + r.status));

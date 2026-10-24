@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FFDE7A">
+<title>FindMine</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<script src="js/config.js"></script>
+<link rel="stylesheet" href="css/app.css">
+<style>
+  .brand { text-align:center; margin: .5rem 0 1.25rem; }
+  .brand h1 { margin: 0; }
+  .brand img { width: min(80%, 18rem); height: auto; }
+  :root[data-theme="dark"] .brand img { background: var(--primary); border-radius: 1.25rem; padding: .5rem 1rem; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .brand img { background: var(--primary); border-radius: 1.25rem; padding: .5rem 1rem; } }
+  .heard { text-align:center; min-height:1.5em; }
+  .mode { text-align:center; font-weight:700; color: var(--danger); min-height:1.2em; }
+</style>
+</head>
+<body>
+<button id="start" class="cover" type="button">
+  <img src="assets/logo.svg" alt="">
+  <span class="sr-only">FindMine.</span>
+  <small id="startHint">Tap anywhere to start.</small>
+</button>
+
+<main class="wrap">
+  <div class="brand">
+    <h1><img src="assets/logo.svg" alt="FindMine"></h1>
+    <p class="lead" id="tag">Find your own things, by voice and sound.</p>
+  </div>
+
+  <button id="mic" class="btn btn-xl"><span class="icon" aria-hidden="true">🎤</span><span id="lMic">Speak</span></button>
+  <p id="heard" class="status heard" aria-live="polite"></p>
+
+  <nav aria-label="Main">
+    <a class="btn btn-lg" href="./search.html"><span class="icon" aria-hidden="true">🔎</span><span id="lFind">Find my item</span></a>
+    <a class="btn btn-lg" href="./find.html"><span class="icon" aria-hidden="true">🗣️</span><span id="lVoice">Ask by voice</span></a>
+    <a class="btn btn-lg btn-secondary" href="./register.html"><span class="icon" aria-hidden="true">📸</span><span id="lReg">Register an item</span></a>
+    <a class="btn btn-lg btn-plain" href="./settings.html"><span class="icon" aria-hidden="true">⚙️</span><span id="lSet">Settings</span></a>
+  </nav>
+
+  <button id="install" class="btn btn-plain hidden">📲 Install FindMine on this phone</button>
+  <p class="mode" id="mode"></p>
+
+  <details>
+    <summary>Team tools</summary>
+    <a href="./tools/camera.html">Camera test (boxes + speed)</a>
+    <a href="./tools/guide.html">Guidance test (any object)</a>
+    <a id="toolTrace" href="#" target="_blank" rel="noopener">Search traces (server)</a>
+    <a id="toolHealth" href="#" target="_blank" rel="noopener">Server health</a>
+  </details>
+</main>
+
+<script>window.FM_OWN_START = true;</script>
+<script src="js/prompts.js"></script>
+<script>
+  const L = {
+    en: { tag: "Find your own things, by voice and sound.", find: "Find my item", voice: "Ask by voice", reg: "Register an item", set: "Settings", install: "📲 Install FindMine on this phone",
+          mic: "Speak", listening: "Listening…", tap: "Tap anywhere to start.", heard: "I heard: ",
+          welcome: "Welcome to FindMine. Say “find my” and an item, or “register” to add one.",
+          again: "Sorry, I didn’t catch that. Tap the big button at the top and try again." },
+    fr: { tag: "Retrouvez vos objets, à la voix et au son.", find: "Trouver mon objet", voice: "Demander à la voix", reg: "Enregistrer un objet", set: "Réglages", install: "📲 Installer FindMine sur ce téléphone",
+          mic: "Parler", listening: "J’écoute…", tap: "Touchez l’écran pour commencer.", heard: "J’ai entendu : ",
+          welcome: "Bienvenue dans FindMine. Dites « trouve mon » et un objet, ou « enregistrer » pour en ajouter un.",
+          again: "Désolé, je n’ai pas compris. Touchez le grand bouton en haut et réessayez." },
+    ar: { tag: "اعثر على أغراضك بالصوت.", find: "ابحث عن غرضي", voice: "اسأل بالصوت", reg: "سجّل غرضًا", set: "الإعدادات", install: "📲 ثبّت FindMine على هذا الهاتف",
+          mic: "تكلّم", listening: "أنا أستمع…", tap: "المس الشاشة للبدء.", heard: "سمعت: ",
+          welcome: "مرحبًا بك في FindMine. قل «ابحث عن» واسم الغرض، أو «سجّل» لإضافة غرض.",
+          again: "عفوًا، لم أفهم. المس الزر الكبير في الأعلى وحاول مرة أخرى." },
+    dz: { tag: "لقى الحوايج تاعك بالصوت.", find: "قلّب على حاجتي", voice: "اسقسي بالصوت", reg: "سجّل حاجة", set: "الإعدادات", install: "📲 ركّب FindMine في التيليفون",
+          mic: "هدر", listening: "راني نسمع…", tap: "اضغط على الشاشة باش تبدا.", heard: "سمعت: ",
+          welcome: "مرحبا بيك في FindMine. قول «وين» واسم الحاجة، ولا «سجّل» باش تزيد حاجة.",
+          again: "سمحلي، ما فهمتكش. اضغط على البوطونة الكبيرة لفوق وعاود." },
+  };
+  const l = L[FM.lang] || L.en;
+  document.documentElement.lang = FM.lang === "dz" ? "ar" : FM.lang;
+  document.documentElement.dir = FM.LANG_INFO[FM.lang].dir;
+  document.getElementById("tag").textContent = l.tag;
+  document.getElementById("lFind").textContent = l.find;
+  document.getElementById("lVoice").textContent = l.voice;
+  document.getElementById("lReg").textContent = l.reg;
+  document.getElementById("lSet").textContent = l.set;
+  document.getElementById("install").textContent = l.install;
+  document.getElementById("lMic").textContent = l.mic;
+  document.getElementById("startHint").textContent = l.tap;
+  if (FM.mode === "baseline") document.getElementById("mode").textContent = "Baseline mode is ON (test A)";
+
+  // ───── Spoken start + voice commands ─────
+  const info = FM.LANG_INFO[FM.lang];
+  const $ = (id) => document.getElementById(id);
+
+  function speakAll(texts, done) {
+    if (!("speechSynthesis" in window) || !texts.length) { done && done(); return; }
+    speechSynthesis.cancel();
+    texts.forEach((t, i) => {
+      const u = new SpeechSynthesisUtterance(t);
+      u.lang = info.tts;
+      const v = FM.pickVoice(info.tts); if (v) u.voice = v;
+      if (i === texts.length - 1) { u.onend = () => done && done(); u.onerror = () => done && done(); }
+      speechSynthesis.speak(u);
+    });
+  }
+
+  const REGISTER_WORDS = ["register", "add", "new item", "enregistrer", "enregistre", "ajouter", "ajoute",
+                          "سجل", "سجّل", "تسجيل", "زيد", "اضف", "أضف"];
+  const SETTINGS_WORDS = ["settings", "language", "réglages", "reglages", "langue", "الإعدادات", "اعدادات", "اللغة", "لغة"];
+  function has(text, list) { const t = text.toLowerCase(); return list.some((w) => t.includes(w)); }
+
+  function route(text) {
+    $("heard").textContent = l.heard + "“" + text + "”";
+    if (has(text, REGISTER_WORDS)) location.href = "./register.html";
+    else if (has(text, SETTINGS_WORDS)) location.href = "./settings.html";
+    else location.href = "./find.html?q=" + encodeURIComponent(text);
+  }
+
+  const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let listening = false, rec = null;
+  function listen() {
+    if (!Rec) { $("heard").textContent = "Voice isn’t supported in this browser. Use the buttons below."; return; }
+    if (listening) { rec.stop(); return; }
+    if ("speechSynthesis" in window) speechSynthesis.cancel();
+    rec = new Rec();
+    rec.lang = info.listen;
+    rec.interimResults = false;
+    rec.onstart = () => { listening = true; $("mic").classList.add("on"); $("lMic").textContent = l.listening; };
+    rec.onend = () => { listening = false; $("mic").classList.remove("on"); $("lMic").textContent = l.mic; };
+    rec.onresult = (e) => route(e.results[0][0].transcript);
+    rec.onerror = (e) => {
+      if (e.error === "language-not-supported" && rec.lang === "ar-DZ") { info.listen = "ar-SA"; listen(); return; }
+      if (e.error === "no-speech") speakAll([l.again]);
+    };
+    rec.start();
+  }
+  $("mic").addEventListener("click", listen);
+
+  // Start screen: once per visit. Speaks the notice (first time ever), the welcome, then listens.
+  let firstVisit = true;
+  try { firstVisit = sessionStorage.getItem("findmine-started") !== "1"; } catch (e) {}
+  if (!firstVisit) $("start").remove();
+  else {
+    $("start").focus();
+    $("start").addEventListener("click", () => {
+      try { sessionStorage.setItem("findmine-started", "1"); } catch (e) {}
+      $("start").remove();
+      const texts = FM.disclaimerSeen() ? [l.welcome] : [FM.t("disclaimer"), l.welcome];
+      FM.markDisclaimerSeen();
+      speakAll(texts, listen);
+    });
+  }
+
+  // Installable app
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+  let installEvent = null;
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    installEvent = e;
+    document.getElementById("install").classList.remove("hidden");
+  });
+  document.getElementById("install").addEventListener("click", async () => {
+    if (!installEvent) return;
+    installEvent.prompt();
+    await installEvent.userChoice;
+    installEvent = null;
+    document.getElementById("install").classList.add("hidden");
+  });
+
+  // Team tools point at whichever server this app talks to
+  document.getElementById("toolTrace").href = FM_SERVER + "/trace";
+  document.getElementById("toolHealth").href = FM_SERVER + "/health";
+</script>
+</body>
+</html>

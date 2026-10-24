@@ -3,80 +3,60 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>FindMine · Search</title>
+<meta name="theme-color" content="#FFDE7A">
+<title>FindMine · Find my item</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<script src="js/config.js"></script>
+<link rel="stylesheet" href="css/app.css">
 <style>
-  :root { --bg:#ffffff; --fg:#0d1b2a; --muted:#4a5a6a; --btn:#1446a0; --btn-fg:#ffffff; --yes:#1b7f3a; --no:#b3261e;
-          --line:#c9d3dd; --soft:#eef3f8; color-scheme:light; }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg:#05080d; --fg:#f2f5f8; --muted:#a9b6c3; --btn:#5b8cff; --btn-fg:#05080d; --yes:#4cd07d; --no:#ff6b60;
-            --line:#2a3644; --soft:#111a24; color-scheme:dark; }
-  }
-  * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--fg); font:18px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-         padding:calc(env(safe-area-inset-top,0px) + 12px) 14px calc(env(safe-area-inset-bottom,0px) + 16px); }
-  main { max-width:640px; margin:0 auto; }
-  h1 { font-size:1.6rem; margin:4px 0 12px; }
-  .big { display:block; width:100%; min-height:72px; margin-top:10px; font-size:1.35rem; font-weight:700; border:0;
-         border-radius:14px; background:var(--btn); color:var(--btn-fg); cursor:pointer; }
-  .big.yes { background:var(--yes); color:#fff; }
-  .big.no { background:var(--no); color:#fff; }
-  .answers { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  .answers .big { min-height:110px; font-size:1.8rem; }
-  button:focus-visible { outline:4px solid #ffd400; outline-offset:3px; }
-  #state { display:inline-block; font-size:.9rem; font-weight:800; letter-spacing:.06em; padding:4px 10px;
-           border-radius:999px; background:var(--soft); }
-  #said { font-size:1.4rem; font-weight:700; min-height:1.5em; margin:10px 0; }
-  #direction { font-size:2rem; font-weight:800; text-align:center; min-height:1.3em; }
-  #status { color:var(--muted); min-height:1.4em; }
-  #stage { position:relative; margin-top:10px; }
-  video, canvas { display:block; width:100%; border-radius:10px; }
-  canvas { position:absolute; inset:0; height:100%; pointer-events:none; }
-  .hidden { display:none !important; }
-  .small { font-size:.95rem; color:var(--muted); }
-  a { color:var(--btn); }
+  #modeTag { font-size: 1rem; color: var(--danger); display:block; }
 </style>
 </head>
 <body>
-<main>
-  <h1>Find my item <span id="modeTag" class="small"></span></h1>
+<main class="wrap">
+  <header class="topbar">
+    <a class="back" href="./" aria-label="Home">←</a>
+    <h1>Find my item <span id="modeTag"></span></h1>
+  </header>
 
-  <!-- 1. Pick an item -->
-  <section id="pick">
-    <p id="pickMsg">Loading your items…</p>
+  <section id="pick" aria-labelledby="pickMsg">
+    <p id="pickMsg" class="lead">Loading your items…</p>
     <div id="items"></div>
-    <p class="small"><a href="./">← Home</a> · <a href="./register.html">Register a new item</a> · <a href="./find.html">Ask by voice</a> · <a href="./settings.html">Language</a></p>
+    <p class="small"><a href="./register.html">Register a new item</a> · <a href="./find.html">Ask by voice</a> · <a href="./settings.html">Settings</a></p>
   </section>
 
-  <!-- 2. Searching -->
   <section id="run" class="hidden">
-    <span id="state">…</span>
-    <p id="said" aria-live="assertive"></p>
-    <p id="direction" aria-hidden="true"></p>
+    <p><span class="sr-only">Search state: </span><span id="state" class="chip">…</span></p>
+    <p id="said" class="said" aria-live="assertive"></p>
+    <p id="direction" class="big-readout" aria-hidden="true"></p>
 
-    <div id="ask" class="answers hidden">
-      <button class="big yes" data-answer="yes">Yes</button>
-      <button class="big no" data-answer="no">No</button>
+    <div id="ask" class="grid-2 hidden" role="group" aria-label="Is this yours?">
+      <button class="btn btn-xl btn-success" data-answer="yes">Yes</button>
+      <button class="btn btn-xl btn-danger" data-answer="no">No</button>
     </div>
-    <button id="gotIt" class="big yes hidden" data-answer="got_it">Got it ✋</button>
-    <button id="again" class="big hidden">Search again</button>
+    <button id="gotIt" class="btn btn-xl btn-success hidden" data-answer="got_it">Got it ✋</button>
+    <button id="again" class="btn btn-lg hidden">Search again</button>
 
-    <div id="stage">
-      <video id="video" autoplay playsinline muted></video>
-      <canvas id="overlay"></canvas>
+    <div class="stage">
+      <video id="video" autoplay playsinline muted aria-label="Camera view"></video>
+      <canvas id="overlay" aria-hidden="true"></canvas>
     </div>
 
-    <button id="stop" class="big no">Stop</button>
-    <p id="status" role="status" aria-live="polite"></p>
-    <p class="small" id="traceLink"></p>
+    <button id="stop" class="btn btn-danger">Stop</button>
+    <p id="status" class="status" role="status" aria-live="polite"></p>
+    <p id="traceLink" class="small"></p>
   </section>
 </main>
 
-<script src="prompts.js"></script>
+<script src="js/prompts.js"></script>
 <script>
-  const HTTP = "https://54-90-98-230.sslip.io";
-  // Each phone gets its own random id, so testers only see the items they registered themselves.
-  const OWNER = (() => { try { let o = localStorage.getItem("findmine-owner"); if (!o) { o = Math.random().toString(36).slice(2, 12); localStorage.setItem("findmine-owner", o); } return o; } catch (e) { return ""; } })();
-  const WS = "wss://54-90-98-230.sslip.io/ws";
+  const HTTP = FM_SERVER;
+  const WS = FM_WS;
   const FPS = 5, WIDTH = 640, QUALITY = 0.7;
 
   const $ = (id) => document.getElementById(id);
@@ -204,13 +184,13 @@
   // ---------- Items ----------
   async function loadItems() {
     try {
-      const items = await (await fetch(HTTP + "/items?owner=" + encodeURIComponent(OWNER))).json();
+      const items = await (await fetch(HTTP + "/items")).json();
       if (!items.length) { $("pickMsg").textContent = FM.t("no_items"); return; }
       $("pickMsg").textContent = "What are you looking for?";
       $("items").innerHTML = "";
       for (const it of items) {
         const b = document.createElement("button");
-        b.className = "big";
+        b.className = "btn btn-lg";
         b.textContent = it.name;
         b.addEventListener("click", () => start(it));
         $("items").appendChild(b);

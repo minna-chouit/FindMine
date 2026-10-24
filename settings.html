@@ -3,66 +3,74 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>FindMine · Voice settings</title>
+<meta name="theme-color" content="#FFDE7A">
+<title>FindMine · Settings</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<script src="js/config.js"></script>
+<link rel="stylesheet" href="css/app.css">
 <style>
-  :root { --bg:#ffffff; --fg:#0d1b2a; --muted:#4a5a6a; --btn:#1446a0; --btn-fg:#ffffff; --line:#c9d3dd; --soft:#eef3f8; color-scheme:light; }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg:#05080d; --fg:#f2f5f8; --muted:#a9b6c3; --btn:#5b8cff; --btn-fg:#05080d; --line:#2a3644; --soft:#111a24; color-scheme:dark; }
-  }
-  * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--fg); font:17px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-         padding:calc(env(safe-area-inset-top,0px) + 12px) 14px calc(env(safe-area-inset-bottom,0px) + 16px); }
-  main { max-width:900px; margin:0 auto; }
-  h1 { font-size:1.6rem; margin:4px 0 12px; }
-  h2 { font-size:1.15rem; margin:20px 0 8px; }
-  .row { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
-  .row.two { grid-template-columns:repeat(2,1fr); }
-  .row button { min-height:56px; font-size:1.1rem; font-weight:700; border:2px solid var(--line); border-radius:12px;
-                background:var(--bg); color:var(--fg); cursor:pointer; }
-  .row button[aria-pressed="true"] { background:var(--btn); color:var(--btn-fg); border-color:var(--btn); }
-  button:focus-visible { outline:4px solid #ffd400; outline-offset:3px; }
-  #voice, .note { color:var(--muted); min-height:1.4em; }
-  .scroll { overflow-x:auto; margin-top:8px; }
-  table { border-collapse:collapse; width:100%; min-width:720px; font-size:.95rem; }
-  th, td { border-bottom:1px solid var(--line); padding:8px 6px; text-align:start; vertical-align:top; }
-  th { position:sticky; top:0; background:var(--soft); }
-  td.key { font-family:ui-monospace,Consolas,monospace; font-size:.8rem; color:var(--muted); white-space:nowrap; }
   td[dir="rtl"] { text-align:right; }
-  td button { border:0; background:none; color:var(--btn); font-size:1.1rem; cursor:pointer; padding:0 4px; }
-  a { color:var(--btn); }
 </style>
 </head>
 <body>
-<main>
-  <h1>Voice settings</h1>
+<main class="wrap">
+  <header class="topbar">
+    <a class="back" href="./" aria-label="Home">←</a>
+    <h1>Settings</h1>
+  </header>
 
   <h2>Language</h2>
-  <div class="row" id="langs"></div>
-  <p id="voice"></p>
+  <div id="langs" class="grid-4" role="group" aria-label="Language"></div>
+  <p id="voice" class="small"></p>
 
   <h2>How much should it talk?</h2>
-  <div class="row two">
-    <button data-vb="short">Short</button>
-    <button data-vb="detailed">Detailed</button>
+  <div class="grid-2" role="group" aria-label="Talk">
+    <button class="btn" data-vb="short">Short</button>
+    <button class="btn" data-vb="detailed">Detailed</button>
+  </div>
+
+  <h2>Text size</h2>
+  <div class="grid-3" role="group" aria-label="Text size">
+    <button class="btn" data-size="normal">A</button>
+    <button class="btn" data-size="large" style="font-size:1.4rem">A</button>
+    <button class="btn" data-size="xl" style="font-size:1.7rem">A</button>
+  </div>
+  <p class="small">Normal · Large · Extra large</p>
+
+  <h2>Colours</h2>
+  <div class="grid-3" role="group" aria-label="Colours">
+    <button class="btn" data-theme-btn="auto">Auto</button>
+    <button class="btn" data-theme-btn="light">Light</button>
+    <button class="btn" data-theme-btn="dark">Dark</button>
   </div>
 
   <h2>Test mode</h2>
-  <div class="row two">
-    <button data-mode="full">Full app</button>
-    <button data-mode="baseline">Baseline (test A)</button>
+  <div class="grid-2" role="group" aria-label="Test mode">
+    <button class="btn" data-mode="full">Full app</button>
+    <button class="btn" data-mode="baseline">Baseline (test A)</button>
   </div>
-  <p id="modeNote" class="note"></p>
+  <p id="modeNote" class="small"></p>
 
   <h2>Safety notice</h2>
-  <div class="row two"><button id="replay">Play the notice again</button></div>
+  <button id="replay" class="btn btn-plain">Play the notice again</button>
+
+  <details>
+    <summary>Team: server address</summary>
+    <p id="serverNow" class="small"></p>
+    <label for="server">Server (leave empty for the default)</label>
+    <input id="server" type="text" placeholder="https://54-90-98-230.sslip.io" autocomplete="off">
+    <button id="saveServer" class="btn btn-plain">Save and reload</button>
+  </details>
 
   <h2>All sentences (tap ▶ to listen)</h2>
   <div class="scroll"><table id="table"></table></div>
-
-  <p><a href="./">← Home</a> · <a href="./find.html">Find my item</a> · <a href="./register.html">Register an item</a></p>
 </main>
-
-<script src="prompts.js"></script>
+<script src="js/prompts.js"></script>
 <script>
   const SAMPLE = { item: "keys", clock: 2, n: 1, total: 5, side: "side_front", dist: "dist_mid", items: "keys, wallet" };
   const LANGS = Object.keys(FM.LANG_INFO);
@@ -70,6 +78,11 @@
   function refresh() {
     document.querySelectorAll("[data-l]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.l === FM.lang)));
     document.querySelectorAll("[data-vb]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.vb === FM.verbosity)));
+    let curText = "normal", curTheme = "auto";
+    try { curText = localStorage.getItem("findmine-text") || "normal"; curTheme = localStorage.getItem("findmine-theme") || "auto"; } catch (e) {}
+    document.querySelectorAll("[data-size]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.size === curText)));
+    document.querySelectorAll("[data-theme-btn]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.themeBtn === curTheme)));
+    document.getElementById("serverNow").textContent = "Now using: " + FM_SERVER;
     document.querySelectorAll("[data-mode]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === FM.mode)));
     document.getElementById("modeNote").textContent = FM.mode === "baseline"
       ? "Baseline is ON: searches send mode \"baseline\" (test condition A)."
@@ -98,7 +111,7 @@
   }
 
   document.getElementById("langs").innerHTML = LANGS.map((l) =>
-    "<button data-l='" + l + "'>" + FM.LANG_INFO[l].name + "</button>").join("");
+    "<button class='btn' data-l='" + l + "'>" + FM.LANG_INFO[l].name + "</button>").join("");
   document.getElementById("langs").addEventListener("click", (e) => {
     const b = e.target.closest("[data-l]"); if (!b) return;
     FM.setLang(b.dataset.l); refresh(); FM.say("welcome", {}, { interrupt: true });
@@ -117,6 +130,26 @@
 
   if ("speechSynthesis" in window) speechSynthesis.addEventListener("voiceschanged", refresh);
   refresh();
+
+  // Display: text size and colours (applied instantly, remembered on this phone)
+  document.querySelectorAll("[data-size]").forEach((b) => b.addEventListener("click", () => {
+    try { localStorage.setItem("findmine-text", b.dataset.size); } catch (e) {}
+    const r = document.documentElement;
+    if (b.dataset.size === "normal") r.removeAttribute("data-text"); else r.setAttribute("data-text", b.dataset.size);
+    refresh();
+  }));
+  document.querySelectorAll("[data-theme-btn]").forEach((b) => b.addEventListener("click", () => {
+    try { localStorage.setItem("findmine-theme", b.dataset.themeBtn); } catch (e) {}
+    const r = document.documentElement;
+    if (b.dataset.themeBtn === "auto") r.removeAttribute("data-theme"); else r.setAttribute("data-theme", b.dataset.themeBtn);
+    refresh();
+  }));
+  // Team: server address (only needed if the server moves to a new IP)
+  document.getElementById("saveServer").addEventListener("click", () => {
+    const v = document.getElementById("server").value.trim();
+    try { if (v) localStorage.setItem("findmine-server", v); else localStorage.removeItem("findmine-server"); } catch (e) {}
+    location.reload();
+  });
 </script>
 </body>
 </html>

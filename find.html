@@ -3,61 +3,50 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>FindMine · Find my item</title>
+<meta name="theme-color" content="#FFDE7A">
+<title>FindMine · Ask by voice</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<script src="js/config.js"></script>
+<link rel="stylesheet" href="css/app.css">
 <style>
-  :root { --bg:#ffffff; --fg:#0d1b2a; --muted:#4a5a6a; --btn:#1446a0; --btn-fg:#ffffff; --line:#c9d3dd; --on:#b3261e; color-scheme:light; }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg:#05080d; --fg:#f2f5f8; --muted:#a9b6c3; --btn:#5b8cff; --btn-fg:#05080d; --line:#2a3644; --on:#ff6b60; color-scheme:dark; }
-  }
-  * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--fg); font:18px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-         padding:calc(env(safe-area-inset-top,0px) + 12px) 14px calc(env(safe-area-inset-bottom,0px) + 16px); }
-  main { max-width:640px; margin:0 auto; }
-  h1 { font-size:1.6rem; margin:4px 0 12px; }
-  .langs { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
-  .langs button { min-height:56px; font-size:1.15rem; font-weight:700; border:2px solid var(--line); border-radius:12px;
-                  background:var(--bg); color:var(--fg); cursor:pointer; }
-  .langs button[aria-pressed="true"] { background:var(--btn); color:var(--btn-fg); border-color:var(--btn); }
-  #mic { display:block; width:100%; min-height:160px; margin:18px 0 10px; font-size:1.6rem; font-weight:800;
-         border:0; border-radius:24px; background:var(--btn); color:var(--btn-fg); cursor:pointer; }
-  #mic.on { background:var(--on); }
-  button:focus-visible, input:focus-visible { outline:4px solid #ffd400; outline-offset:3px; }
-  #heard { font-size:1.1rem; color:var(--muted); min-height:1.5em; }
-  #answer { font-size:1.4rem; font-weight:700; min-height:1.5em; margin:8px 0 16px; }
-  .typed { display:flex; gap:8px; }
-  .typed input { flex:1; font-size:1.1rem; padding:12px; border:2px solid var(--line); border-radius:12px; background:var(--bg); color:var(--fg); }
-  .typed button { min-width:90px; font-size:1.05rem; font-weight:700; border:0; border-radius:12px; background:var(--btn); color:var(--btn-fg); }
-  #items { color:var(--muted); font-size:1rem; }
-  a { color:var(--btn); }
+  .typed { display:flex; gap:.6rem; align-items:stretch; }
+  .typed input { flex:1; }
+  .typed .btn { width:auto; margin:0; min-width:5.5rem; }
 </style>
 </head>
 <body>
-<main>
-  <h1>Find my item</h1>
+<main class="wrap">
+  <header class="topbar">
+    <a class="back" href="./" aria-label="Home">←</a>
+    <h1>Ask by voice</h1>
+  </header>
 
-  <div class="langs" role="group" aria-label="Language">
-    <button data-lang="en" aria-pressed="true">English</button>
-    <button data-lang="fr" aria-pressed="false">Français</button>
-    <button data-lang="ar" aria-pressed="false" lang="ar">العربية</button>
+  <div class="grid-3" role="group" aria-label="Language">
+    <button class="btn" data-lang="en" aria-pressed="true">English</button>
+    <button class="btn" data-lang="fr" aria-pressed="false">Français</button>
+    <button class="btn" data-lang="ar" aria-pressed="false" lang="ar">العربية</button>
   </div>
 
-  <button id="mic">🎤 Tap and speak</button>
-  <p id="heard" aria-live="polite"></p>
-  <p id="answer" role="status" aria-live="assertive"></p>
+  <button id="mic" class="btn btn-xl">🎤 Tap and speak</button>
+  <p id="heard" class="status" aria-live="polite"></p>
+  <p id="answer" class="said" role="status" aria-live="assertive"></p>
 
+  <label for="typed">Or type it</label>
   <div class="typed">
-    <input id="typed" type="text" placeholder="or type: find my keys" aria-label="Type a command">
-    <button id="go">Go</button>
+    <input id="typed" type="text" placeholder="find my keys" autocomplete="off">
+    <button id="go" class="btn">Go</button>
   </div>
 
-  <p id="items">Loading your items…</p>
-  <p><a href="./register.html">Register a new item</a> · <a href="./">← Home</a></p>
+  <p id="items" class="small">Loading your items…</p>
+  <p class="small"><a href="./register.html">Register a new item</a> · <a href="./search.html">Pick from a list</a></p>
 </main>
-
 <script>
-  const SERVER = "https://54-90-98-230.sslip.io";
-  // Each phone gets its own random id, so testers only see the items they registered themselves.
-  const OWNER = (() => { try { let o = localStorage.getItem("findmine-owner"); if (!o) { o = Math.random().toString(36).slice(2, 12); localStorage.setItem("findmine-owner", o); } return o; } catch (e) { return ""; } })();
+  const SERVER = FM_SERVER;
 
   const LANGS = {
     en: { rec: "en-US", tts: "en-US", mic: "🎤 Tap and speak", listening: "Listening…",
@@ -161,7 +150,7 @@
 
   async function loadItems() {
     try {
-      const r = await fetch(SERVER + "/items?owner=" + encodeURIComponent(OWNER));
+      const r = await fetch(SERVER + "/items");
       items = await r.json();
       $("items").textContent = items.length
         ? "Your items: " + items.map((i) => i.name).join(", ")
@@ -215,8 +204,14 @@
   $("go").addEventListener("click", () => { const t = $("typed").value.trim(); if (t) handle(t); });
   $("typed").addEventListener("keydown", (e) => { if (e.key === "Enter") $("go").click(); });
 
-  setLang("en");
-  loadItems();
+  // Follow the language chosen in Settings (Darija -> Arabic here)
+  let saved = "en";
+  try { saved = localStorage.getItem("findmine-lang") || "en"; } catch (e) {}
+  setLang(saved === "dz" ? "ar" : (LANGS[saved] ? saved : "en"));
+
+  // Coming from the home page with a spoken command: find.html?q=find%20my%20keys
+  const spoken = new URLSearchParams(location.search).get("q");
+  loadItems().then(() => { if (spoken) handle(spoken); });
 </script>
 </body>
 </html>

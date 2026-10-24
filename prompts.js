@@ -319,6 +319,9 @@
     // Extra fields for the /ws "start" message, e.g. { mode: "baseline" }
     startExtras() { return mode === "baseline" ? { mode: "baseline" } : {}; },
     showDisclaimer,
+    pickVoice,
+    disclaimerSeen() { return load("findmine-disclaimer-seen", "") === "1"; },
+    markDisclaimerSeen() { store("findmine-disclaimer-seen", "1"); },
   };
 
   // ───── First-open disclaimer ─────
@@ -335,7 +338,7 @@
     box.style.cssText = "position:fixed;inset:0;z-index:9999;border:0;margin:0;width:100%;height:100%;" +
       "display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;" +
       "padding:calc(env(safe-area-inset-top,0px) + 24px) 28px calc(env(safe-area-inset-bottom,0px) + 24px);" +
-      "background:#0d1b2a;color:#ffffff;font:700 1.6rem/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;" +
+      "background:var(--primary,#FFDE7A);color:var(--on-btn,#2B1D0E);font:700 1.6rem/1.4 \"Atkinson Hyperlegible\",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;" +
       "text-align:center;cursor:pointer;";
     box.innerHTML = '<span style="font-size:3rem" aria-hidden="true">🔎</span>' +
       '<span></span><span style="font-size:1.1rem;font-weight:400;opacity:.85"></span>';
@@ -367,6 +370,9 @@
     return { en: "Tap anywhere to continue.", fr: "Touchez l’écran pour continuer.",
              ar: "المس الشاشة للمتابعة.", dz: "اضغط على الشاشة باش تكمل." }[lang];
   }
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => showDisclaimer());
-  else showDisclaimer();
+  // A page can set window.FM_OWN_START = true before loading this file to run its own start screen.
+  if (!window.FM_OWN_START) {
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => showDisclaimer());
+    else showDisclaimer();
+  }
 })();
