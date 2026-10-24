@@ -19,7 +19,7 @@ import numpy as np
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
 from pipeline.detect import crop_to_item
-from pipeline.models import detector, names, verifier
+from pipeline.models import detector, face_blur, names, verifier
 
 REGION = os.environ.get("AWS_REGION", "us-east-1")
 BUCKET = os.environ.get("FINDMINE_BUCKET", "findmine-items-bucket")
@@ -79,6 +79,9 @@ async def add_photo(item_id: str, photo: UploadFile = File(...), side: str = For
     img = cv.imdecode(np.frombuffer(data, np.uint8), cv.IMREAD_COLOR)
     if img is None:
         raise HTTPException(400, "not a JPEG image")
+    img, n_faces = face_blur(img)  # plan F8.2: no face is ever stored (a helper or family in the background)
+    if n_faces:
+        data = cv.imencode(".jpg", img, [cv.IMWRITE_JPEG_QUALITY, 90])[1].tobytes()
 
     feats = verifier.features(item_crop(img, item.get("class", "")))
     pts = feats.get("pts")

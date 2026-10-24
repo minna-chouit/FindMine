@@ -54,6 +54,9 @@ for name in ("findmine12.onnx", "dinov2_vits14.onnx"):
         s3.download_file(os.environ["FINDMINE_BUCKET"], path, path)
         print("  downloaded", path)
 PY
+# Face model for blurring stored photos: public, straight from OpenCV's model zoo (no S3 upload needed).
+[ -f models/face_detection_yunet_2023mar.onnx ] || curl -sfL -o models/face_detection_yunet_2023mar.onnx \
+  https://media.githubusercontent.com/media/opencv/opencv_zoo/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx
 
 echo "== 5/6 service (systemd: starts on boot, restarts on crash, logs in journald)"
 sudo tee /etc/systemd/system/findmine.service >/dev/null <<UNIT

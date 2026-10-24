@@ -91,7 +91,7 @@ requirements, models from S3, a systemd service (starts on boot, restarts on cra
 
 Once per account (AWS console, us-east-1):
 
-1. **Models to S3:** upload `models/findmine12.onnx` and `models/dinov2_vits14.onnx` to `s3://findmine-items-bucket/models/`.
+1. **Models to S3:** upload `models/findmine12.onnx` and `models/dinov2_vits14.onnx` to `s3://findmine-items-bucket/models/`. (The face-blur model, `models/face_detection_yunet_2023mar.onnx` from OpenCV's model zoo, is downloaded by `deploy.sh` itself; locally, download it from [opencv_zoo](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet).)
 2. **IAM role** for the instance with: `s3:GetObject`/`s3:PutObject` on the bucket, `dynamodb:GetItem`/`PutItem`/`UpdateItem`/`Scan` on `findmine-items`, and `bedrock:InvokeModel`.
 3. **Instance:** Ubuntu 24.04 (arm64 for Graviton, e.g. `t4g.medium`/`c7g.large`; x86 `c7i-flex.large` for the baseline), the IAM role above, security group open on 22 (your IP), 80 and 443.
 
