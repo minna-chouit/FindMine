@@ -41,7 +41,8 @@ class Coach:
         self.last_issue = None
 
     def __call__(self, bgr, now=None):
-        """-> {"issue": code|None, "fixed": code|None, "metrics": {...}}. issue None = frame is usable."""
+        """-> {"issue": code|None, "hint": code|None, "fixed": code|None, "metrics": {...}}.
+        issue None = frame is usable; hint = usable, but tell the user how to do better."""
         now = time.monotonic() if now is None else now
         h, w = bgr.shape[:2]
         grey = cv.cvtColor(cv.resize(bgr, (WIDTH, round(h * WIDTH / w)), interpolation=cv.INTER_AREA),
@@ -65,8 +66,11 @@ class Coach:
         elif self.flat_since is None:
             self.flat_since = now
 
+        # issue = frame is useless, skip detection. hint = say the fix but still detect: on our home videos
+        # (Oct 24, 5 fps) the detector still found the item in 47% of "blur" frames vs 20% of blurry shake.
         # ponytail: a pitch-black room also reads as "blocked" after 1 s; split them with colour
         # (a finger is red-tinted) if the VizWiz/our clips show confusion.
+        issue = hint = None
         if self.flat_since is not None and now - self.flat_since >= BLOCKED_SECS:
             issue = "blocked"
         elif m["mean"] < DARK_MEAN or m["dark_clip"] > DARK_CLIP:
@@ -74,15 +78,16 @@ class Coach:
         elif m["bright_clip"] > BRIGHT_CLIP:
             issue = "bright"
         elif m["shake"] > SHAKE_PX:
-            issue = "shake"
+            if m["blur"] < BLUR_VAR:
+                issue = "shake"       # moving and smeared
+            else:
+                hint = "shake"        # fast sweep but the frame is still sharp
         elif m["blur"] < BLUR_VAR:
-            issue = "blur"
-        else:
-            issue = None
+            hint = "blur"
 
         fixed = self.last_issue if issue is None else None   # the agent's "did the fix work?" signal
         self.last_issue = issue
-        return {"issue": issue, "fixed": fixed, "metrics": {k: round(v, 3) for k, v in m.items()}}
+        return {"issue": issue, "hint": hint, "fixed": fixed, "metrics": {k: round(v, 3) for k, v in m.items()}}
 
     def _shake(self, grey):
         prev, self.prev = self.prev, grey

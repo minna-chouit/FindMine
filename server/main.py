@@ -182,7 +182,7 @@ async def frames(sock: WebSocket):
                                                "px": d[2:], "cls": names[c], "distance": distance(names[c], d[2:], w)[0],
                                                "cues": cues.get(id(d))})
                 best_match = max([best_match] + [c["conf"] for c in candidates])
-                acts = search.step(q, candidates)
+                acts = search.step(q | ({"hint_fix": FIX[q["hint"]]} if q.get("hint") else {}), candidates)
                 if search.state != "GUIDE":
                     track = None
                 elif track is None and candidates:
