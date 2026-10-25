@@ -52,8 +52,11 @@ export. Pipeline per frame (`server/main.py`):
 - Detector run 1: YOLO11n from COCO weights, COCO 2017 + LVIS v1 merged into 12 classes (31,786 train / 1,341
   val images, `docs/class_counts.md`), 70 epochs on a Kaggle T4. val mAP@50 **0.280**. Exported to ONNX
   (opset 12); cv.dnn matches onnxruntime within 7e-3; 64 ms/frame on a laptop CPU.
-- Detector run 2 (keys fine-tune from run 1, + 984 public keys photos): [TODO results from `eval/run2_report.md`
-  and `eval/detector_compare.md`; say whether it was deployed].
+- Detector run 2, **deployed** on Oct 25 (`eval/run2_report.md`): fine-tuned from run 1 on a Kaggle T4 for
+  30 epochs (learning rate 0.002, no warm-up) with 984 public keys photos (Roboflow Universe, CC BY 4.0), every
+  run-1 image of a weak class, and 6,000 run-1 images replayed so it doesn't forget. val mAP@50 0.268 → **0.321**;
+  keys AP@50 0.004 → 0.751 (optimistic: those val images come from the same keys dataset).
+  `ml/kaggle_finetune_run2.ipynb`, `docs/finetune_keys.md`.
 - Verifier: DINOv2-small in cv.dnn (cosine to PyTorch ≥ 0.9993, 110 ms/crop on a laptop; needs an export
   wrapper, see `docs/spikes.md`). Fusion weights fitted with `cv.ml` on our own photos: bias −1.81,
   embedding 1.73, geometry 0.57, colour 1.02.
@@ -100,18 +103,23 @@ actions, planner tools and latency) is logged and replayed at `/trace/<session>`
 2 bottles, 2 sets of keys, cup, phone, headphones): 5 reference photos per item, test photos and videos in rooms,
 with look-alikes. Public data: COCO 2017, LVIS v1 (detector), Roboflow Universe keys (run 2, CC BY 4.0).
 
-### 6.2 Detection on our own videos (`ml/compare_detectors.py`, conf 0.25, 2 fps)
+### 6.2 Detection on our own videos (`ml/compare_detectors.py`, conf 0.25, 2 fps; never used for training)
 
-| Item | Frames with a box of its own class |
-|---|---|
-| juice bottle / water bottle | 7/7 · 7/7 (100%) |
-| cup | 14/17 (82%) |
-| phone | 17/21 (81%) |
-| 3 bags | 45–52% |
-| **keys** (2 sets) | **0/40 (0%)**: also 0 at conf 0.05 and with 2×2 tiles |
-| headphones | not one of the 12 classes |
+| Item | Run 1 | Run 2 (deployed) |
+|---|---|---|
+| juice bottle / water bottle | 7/7 · 7/7 (100%) | 7/7 · 7/7 (100%) |
+| cup | 14/17 (82%) | 13/17 (76%) |
+| phone | 17/21 (81%) | 15/21 (71%) |
+| 3 bags | 42–52% | 38–52% |
+| headphones (detected as earbuds) | 0/29 | 5/29 (17%) |
+| **keys**, close-up photos | 0/11 | **10/11** |
+| **keys**, search frames | 0/40 | 2/40; **8/40 with 2×2 zoomed tiles** (23/40 at conf 0.05) |
 
-Run 2: [TODO keys after the fine-tune].
+Run 2 learned keys: it recognises our own keys up close, which run 1 never did. In search shots the keys are
+only a few dozen pixels wide, so they are found mainly by the tile search (the server runs it every 3rd frame
+while nothing of the item's class is in view), mostly below the 0.25 threshold. The small drops on cup and phone
+are 1–2 frames each. With run 2 the look-alike checks are unchanged: 0 of 75 same-class look-alikes and 0 of 939
+other-class boxes at or above *found*.
 
 ### 6.3 Camera coach: blur is a hint, not a reason to skip (bottle/cup/bag/phone videos, 367 frames at 5 fps)
 
@@ -166,12 +174,15 @@ Example: `eval/face_blur_example.jpg`.
 
 ### 6.7 Latency
 
-Laptop CPU: detector 64 ms/frame, DINOv2 110 ms per verified crop (at most 2 per frame).
+Laptop CPU: detector 64 ms/frame (run 2 is the same YOLO11n size), DINOv2 110 ms per verified crop (at most 2 per frame).
 [TODO measured on the EC2 instance: frame round trip p50/p95].
 
 ## 7. Limitations and failure cases
 
-- **Keys:** run 1 never boxes keys (thin, shiny, small). [TODO: after run 2]
+- **Keys:** run 1 never boxed keys. Run 2 recognises them up close (10/11) but finds them in only 8 of 40 search
+  frames at the normal threshold: they are tiny at search distance. Next steps: train with our own keys frames
+  from a distance (`ml/extract_frames.py`), a larger input size for small objects, or a lower threshold for keys
+  inside tiles (17/40 at 0.15, with more false keys boxes for the item check to reject).
 - **Plain objects** (a white cup) lose two of three signals (no texture for geometry, colour shifts with light),
   so they sit around the *ask* threshold and are rarely "found" outright.
 - **At search distance** "mine vs look-alike" is close to chance; FindMine asks the user to move closer.

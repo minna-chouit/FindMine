@@ -71,6 +71,15 @@ instead (70 epochs, longer but fine overnight). Expected: about 1.5–3 h with r
    `s3://findmine-items-bucket/models/findmine12.onnx` (replace it; keep a copy of run 1 as `findmine12_run1.onnx`),
    delete `models/findmine12.onnx` on the server and re-run `infra/deploy.sh` (it downloads models that are missing).
    The class list (`models/findmine12.json`, in git) is the same 12 classes, so it doesn't change.
+
+**Done on Oct 25: run 2 is deployed.** Which model is running: `sha256sum models/findmine12.onnx` on the server.
+
+| model | sha256 |
+|---|---|
+| run 2 (deployed) | `052cfbb7748cf286f266e8583f0553b2fe19bbda7b08ec1362bfd46aec7109ad` |
+| run 1 (backup: `s3://findmine-items-bucket/models/findmine12_run1.onnx`) | `7bc0465b848ae7fc7ffb9f51f2cfe99c332592c8f47fafc694170cf911622c9e` |
+
+Roll back: upload `findmine12_run1.onnx` as `models/findmine12.onnx` in S3, delete it on the server, re-run deploy.sh.
    **KEEP RUN 1?** Do nothing to the server; put `eval/detector_compare.md` and `eval/run2_report.md` in the report.
 
 ## Files
