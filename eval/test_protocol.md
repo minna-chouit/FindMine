@@ -33,7 +33,7 @@ Download the form's responses as CSV to `eval/form_responses.csv`, then:
 ```
 
 It writes `eval/user_tests_summary.md`: success rate, median time and wrong-item picks per mode × light, the mean
-of each 1–5 question and the written answers. Names never appear in the summary. Stop the EC2 instance afterwards.
+of each 1–5 question and the written answers. Names never appear in the summary. Keep the EC2 server running: judging lasts until Nov 9.
 
 ## Safety
 
