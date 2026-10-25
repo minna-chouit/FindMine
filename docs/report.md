@@ -23,15 +23,20 @@ FindMine is a phone web app for blind and low-vision users (and the sighted help
 
 ## 2. Architecture
 
-[TODO: insert the final architecture diagram (docs/architecture.png)]
+![FindMine architecture](architecture.png)
+
+![FindMine agent workflow](agent_workflow.png)
+
+*Editable sources: `docs/diagrams/`.*
 
 | Part | Runs on | What it does |
 |---|---|---|
 | Phone app (PWA) | the phone's browser | camera → 640 px JPEG frames over a WebSocket; speaks, beeps (stereo pan = direction), vibrates, torch; voice commands (Web Speech API) |
-| Vision service | **AWS EC2** [TODO instance type, Graviton/x86], Python 3.12, FastAPI, **OpenCV 5.0.0** | coach → detect → verify → track → guide, per frame |
+| Vision service | **AWS EC2** `c7i-flex.large` (x86, us-east-1), Python 3.12, FastAPI, **OpenCV 5.0.0** | coach → detect → verify → track → guide, per frame |
 | Search agent | same service + **Amazon Bedrock** (Claude Haiku 4.5) | state machine every frame; LLM planner only at decision points |
 | Storage | **S3** (registration photos, face-blurred, + their features) · **DynamoDB** (items, last seen) | no live frame is ever stored |
-| Delivery | Caddy (HTTPS on sslip.io), systemd (restart on crash), `infra/deploy.sh` (one command) | |
+| Delivery | Caddy (HTTPS on sslip.io, one link serves the app and the API), systemd (restart on crash), `infra/deploy.sh` (one command) | |
+| Monitoring | **Route 53** health check on `/health` every 30 s · **CloudWatch** alarm (email when down) + dashboard (health, CPU, alarm) | |
 
 ## 3. OpenCV 5 implementation
 
@@ -85,13 +90,20 @@ actions, planner tools and latency) is logged and replayed at `/trace/<session>`
 
 ## 5. AWS deployment
 
-- **Compute:** one EC2 instance [TODO type] running the vision service under systemd (restarts on crash),
+- **Compute:** one EC2 `c7i-flex.large` (x86, us-east-1) running the vision service under systemd (restarts on crash;
+  proven by killing the process: back in under 15 s),
   Caddy for HTTPS. `infra/deploy.sh` turns a fresh instance into the running service in one command
   (packages, pinned Python requirements, models from S3, face model from OpenCV's model zoo, service, HTTPS,
   health check).
 - **S3:** registration photos (faces pixelated) and their features; detector and verifier models.
 - **DynamoDB:** one row per item (name, class, owner id, consent, last seen).
 - **Bedrock:** the planner; ~1.5 s per call in our traces, a few calls per search at most.
+- **Monitoring:** a Route 53 health check calls `https://54-90-98-230.sslip.io/health` every 30 s from several
+  regions; a CloudWatch alarm (`FindMine down`, health < 1 for 1 minute) emails the team; a CloudWatch dashboard
+  shows health, CPU and the alarm state.
+- **Delete my data:** `DELETE /items/<id>?owner=` and `DELETE /items?owner=` remove the S3 photos, fingerprints,
+  DynamoDB row and cache; a phone can't delete another phone's items (`server/test_delete.py`).
+- **Permissions:** an IAM role on the instance (S3, DynamoDB, Bedrock); no access keys on the server.
 - **Budget:** Free-plan credits only; training ran on Kaggle, not AWS.
 - [TODO: COOL / Graviton benchmark, or one line saying we did not do it]
 
@@ -175,7 +187,9 @@ Example: `eval/face_blur_example.jpg`.
 ### 6.7 Latency
 
 Laptop CPU: detector 64 ms/frame (run 2 is the same YOLO11n size), DINOv2 110 ms per verified crop (at most 2 per frame).
-[TODO measured on the EC2 instance: frame round trip p50/p95].
+On the deployed system (phone in Algeria → `c7i-flex.large` in us-east-1, `app/tools/camera.html`, ~50 frames): round
+trip median **300–400 ms** depending on the network, about 2–3 guidance updates per second. Most of it is the
+distance (~200 ms); a server in eu-west-3 (Paris) would cut roughly 150 ms. p95 not measured separately.
 
 ## 7. Limitations and failure cases
 
@@ -200,7 +214,11 @@ Laptop CPU: detector 64 ms/frame (run 2 is the same YOLO11n size), DINOv2 110 ms
   each phone only sees its own items (random per-phone id, no account); consent checkbox before any photo can be
   used to improve the app.
 - **Accessibility:** WCAG 2.2 AA (AAA contrast), screen-reader labels, speech + beeps + vibration, large text
-  options (`docs/accessibility.md`).
+  and dark mode, a font designed for low vision (Atkinson Hyperlegible) (`docs/accessibility.md`). Registration
+  works by voice (item name spoken) with photos taken automatically when the camera coach says the picture is
+  good. Checked end to end with VoiceOver on iPhone (all checks passed); iOS can't vibrate or use the torch from a
+  web page.
+- **Delete my data:** Settings → My items and data → delete one item or everything (tap twice to confirm).
 - **Not a mobility aid:** FindMine finds belongings; it does not detect obstacles or stairs (spoken on first use).
 - **User tests:** volunteers gave consent, could stop at any time, a spotter stayed next to them.
 
