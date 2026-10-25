@@ -35,6 +35,16 @@ def find(pattern, depth=6):
     return [p for d in range(depth + 1) for p in glob.glob("/kaggle/input/" + "*/" * d + pattern)]
 
 
+def run(args):
+    """Run a script and print its output live: a child process's output never reaches Kaggle's log otherwise."""
+    with subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1) as p:
+        for line in p.stdout:
+            print(line, end="", flush=True)
+    if p.returncode:
+        raise SystemExit(f"{args[1]} failed (exit {p.returncode}): see the lines above")
+
+
+
 print("Inputs attached:")
 for p in sorted(glob.glob("/kaggle/input/*/*/*")):
     print("  ", p)
@@ -53,7 +63,7 @@ shutil.copytree(labels, W, dirs_exist_ok=True, ignore=shutil.ignore_patterns("im
 for split in ("train2017", "val2017"):
     if not (W / "images" / split).exists():
         os.symlink(coco / split, W / "images" / split)
-subprocess.run(["python", "build_finetune.py", "--root", str(W), "--extra", *extras, "--replay", "6000"], check=True)
+run(["python", "build_finetune.py", "--root", str(W), "--extra", *extras, "--replay", "6000"])
 for lst in ("train_ft.txt", "val_ft.txt"):
     paths = (W / lst).read_text().split()
     missing = [p for p in paths if not (W / p).exists()]
@@ -69,7 +79,7 @@ if best1:
 else:
     print("run-1 weights not found: training from stock YOLO11n (slower, still fine overnight)")
     args += ["--model", "yolo11n.pt", "--epochs", "70"]
-subprocess.run(args, check=True)
+run(args)
 '''
 
 export = r'''import json
