@@ -29,16 +29,26 @@ Full steps: `docs/finetune_keys.md`.
 setup = r'''import glob, os, shutil, subprocess
 from pathlib import Path
 
-W = Path("/kaggle/working/findmine")
-labels = Path(glob.glob("/kaggle/input/**/findmine.yaml", recursive=True)[0]).parent
-coco = Path(glob.glob("/kaggle/input/**/train2017/000000000009.jpg", recursive=True)[0]).parent.parent
-best1 = glob.glob("/kaggle/input/**/findmine_run1/weights/best.pt", recursive=True)
-extras = sorted({str(Path(p).parent) for p in glob.glob("/kaggle/input/**/data.yaml", recursive=True)
-                 if not str(p).startswith(str(labels))})
-print("labels:", labels, "| coco:", coco, "| run-1 weights:", best1 or "NOT FOUND", "| keys exports:", extras)
-assert extras, "add at least one keys export (Roboflow YOLOv8 zip uploaded as a Kaggle dataset)"
 
-shutil.copytree(labels, W, dirs_exist_ok=True)   # writable copy (Ultralytics writes .cache files)
+def find(pattern, depth=6):
+    """Matches up to `depth` folders below /kaggle/input. (A recursive ** glob walks all 118k COCO images: minutes.)"""
+    return [p for d in range(depth + 1) for p in glob.glob("/kaggle/input/" + "*/" * d + pattern)]
+
+
+print("Inputs attached:")
+for p in sorted(glob.glob("/kaggle/input/*/*/*")):
+    print("  ", p)
+W = Path("/kaggle/working/findmine")
+labels = Path(find("findmine.yaml")[0]).parent
+coco = Path(find("train2017/000000000009.jpg")[0]).parent.parent
+best1 = find("runs/detect/findmine_run1/weights/best.pt", 4)
+extras = sorted({str(Path(p).parent) for p in find("data.yaml") if not p.startswith(str(labels))})
+print("labels:", labels, "| coco:", coco, "| run-1 weights:", best1 or "NOT FOUND", "| keys exports:", extras)
+assert extras, ("no keys export found (a folder with data.yaml + train/images + train/labels). "
+                f"Add the keys dataset under Add Input. Zips seen (Kaggle didn't unpack them?): {find('*.zip')}")
+
+# writable copy of the labels (Ultralytics writes .cache files); never copy image folders
+shutil.copytree(labels, W, dirs_exist_ok=True, ignore=shutil.ignore_patterns("images", "*.cache"))
 (W / "images").mkdir(exist_ok=True)
 for split in ("train2017", "val2017"):
     if not (W / "images" / split).exists():
