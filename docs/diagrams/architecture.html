@@ -1,0 +1,76 @@
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>body{margin:0;background:#FFF8EA}svg{display:block}text{font-family:"Atkinson Hyperlegible","Segoe UI",sans-serif;fill:#2B1D0E}
+.t{font-size:22px;font-weight:700}.s{font-size:15px}.h{font-size:30px;font-weight:700}.c{font-size:13px;fill:#5A4224}</style></head><body>
+<svg width="1600" height="900" viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#2B1D0E"/></marker></defs>
+<text x="40" y="52" class="h">FindMine · architecture</text>
+<text x="40" y="80" class="c">All vision at inference time runs in OpenCV 5.0.0 (cv.dnn + classic CV). The LLM is only called at decision points, never per frame.</text>
+
+<!-- Phone -->
+<rect x="40" y="120" width="300" height="460" rx="28" fill="#FFDCCB" stroke="#7A5A2E" stroke-width="3"/>
+<text x="64" y="160" class="t">📱 Phone (PWA)</text>
+<text x="64" y="186" class="c">any browser · installable · no account</text>
+<g class="s"><text x="64" y="226">• Camera → 640 px JPEG, ~5 fps</text>
+<text x="64" y="256">• Voice: “find my keys”</text><text x="80" y="278" class="c">Web Speech API · EN / FR / AR / Darija</text>
+<text x="64" y="314">• Speaks every server action</text>
+<text x="64" y="344">• Stereo beeps (pan = direction,</text><text x="80" y="366">speed = distance), vibration</text>
+<text x="64" y="402">• Yes / No / Got it buttons</text>
+<text x="64" y="432">• Auto-capture registration</text>
+<text x="64" y="462">• Torch (Android)</text>
+<text x="64" y="498">• Large text, dark mode,</text><text x="80" y="520">screen-reader labels (AAA)</text></g>
+
+<!-- arrows phone <-> caddy -->
+<line x1="345" y1="290" x2="425" y2="290" stroke="#2B1D0E" stroke-width="3" marker-end="url(#a)"/>
+<line x1="425" y1="330" x2="345" y2="330" stroke="#2B1D0E" stroke-width="3" marker-end="url(#a)"/>
+<text x="350" y="278" class="c">frames</text>
+<text x="350" y="354" class="c">actions</text>
+
+<!-- EC2 -->
+<rect x="430" y="110" width="760" height="560" rx="28" fill="#FFF0BD" stroke="#7A5A2E" stroke-width="3"/>
+<text x="456" y="150" class="t">☁️ AWS EC2 · Ubuntu 24.04 · systemd · infra/deploy.sh</text>
+<rect x="456" y="172" width="210" height="150" rx="18" fill="#FFFDF7" stroke="#7A5A2E" stroke-width="2"/>
+<text x="474" y="204" class="t">Caddy</text>
+<text x="474" y="230" class="s">HTTPS (Let’s Encrypt)</text><text x="474" y="254" class="s">sslip.io · one link</text>
+<text x="474" y="280" class="c">serves app/ + proxies</text><text x="474" y="298" class="c">/ws /items /trace /health</text>
+
+<rect x="690" y="172" width="476" height="470" rx="18" fill="#FFFDF7" stroke="#7A5A2E" stroke-width="2"/>
+<text x="710" y="204" class="t">Vision service · FastAPI · OpenCV 5</text>
+<g>
+<rect x="710" y="222" width="436" height="44" rx="12" fill="#FFDE7A"/><text x="724" y="250" class="s"><tspan font-weight="700">1 Coach</tspan> · Laplacian, calcHist, optical flow, Sobel</text>
+<rect x="710" y="274" width="436" height="44" rx="12" fill="#FFDE7A"/><text x="724" y="302" class="s"><tspan font-weight="700">2 Detect</tspan> · YOLO11n (12 classes) in cv.dnn + 2×2 tiles</text>
+<rect x="710" y="326" width="436" height="62" rx="12" fill="#FFDE7A"/><text x="724" y="352" class="s"><tspan font-weight="700">3 Is it mine?</tspan> · DINOv2 (cv.dnn) + SIFT/RANSAC</text><text x="724" y="374" class="s">+ HSV histogram → cv.ml fusion</text>
+<rect x="710" y="396" width="436" height="44" rx="12" fill="#FFDE7A"/><text x="724" y="424" class="s"><tspan font-weight="700">4 Track</tspan> · TrackerCSRT + KalmanFilter</text>
+<rect x="710" y="448" width="436" height="44" rx="12" fill="#FFDE7A"/><text x="724" y="476" class="s"><tspan font-weight="700">5 Guide</tspan> · clock direction + distance band</text>
+<rect x="710" y="500" width="436" height="62" rx="12" fill="#FFDCCB"/><text x="724" y="526" class="s"><tspan font-weight="700">Search agent</tspan> · state machine, every frame</text><text x="724" y="548" class="s">→ planner only when stuck</text>
+<rect x="710" y="570" width="436" height="56" rx="12" fill="#FFDCCB"/><text x="724" y="596" class="s"><tspan font-weight="700">Register / delete</tspan> · /items · face blur</text><text x="724" y="616" class="c">FaceDetectorYN + pixelate before storing</text>
+</g>
+<line x1="666" y1="247" x2="705" y2="247" stroke="#2B1D0E" stroke-width="3" marker-end="url(#a)"/>
+
+<!-- AWS services -->
+<g>
+<rect x="1240" y="120" width="320" height="110" rx="20" fill="#FFFDF7" stroke="#7A5A2E" stroke-width="3"/>
+<text x="1262" y="156" class="t">🧠 Amazon Bedrock</text><text x="1262" y="182" class="s">Claude Haiku 4.5 planner</text><text x="1262" y="206" class="c">tools: speak · set_torch · ask_user</text>
+<rect x="1240" y="250" width="320" height="110" rx="20" fill="#FFFDF7" stroke="#7A5A2E" stroke-width="3"/>
+<text x="1262" y="286" class="t">📦 Amazon S3</text><text x="1262" y="312" class="s">reference photos (faces blurred)</text><text x="1262" y="336" class="c">+ fingerprints · ONNX models</text>
+<rect x="1240" y="380" width="320" height="110" rx="20" fill="#FFFDF7" stroke="#7A5A2E" stroke-width="3"/>
+<text x="1262" y="416" class="t">📒 DynamoDB</text><text x="1262" y="442" class="s">items: name, class, owner,</text><text x="1262" y="466" class="c">consent, last seen</text>
+<rect x="1240" y="510" width="320" height="110" rx="20" fill="#FFFDF7" stroke="#7A5A2E" stroke-width="3"/>
+<text x="1262" y="546" class="t">📈 CloudWatch</text><text x="1262" y="572" class="s">health check every 30 s,</text><text x="1262" y="596" class="c">alarm (email) · dashboard</text>
+</g>
+<line x1="1150" y1="530" x2="1235" y2="190" stroke="#2B1D0E" stroke-width="2.5" marker-end="url(#a)"/>
+<line x1="1150" y1="600" x2="1235" y2="310" stroke="#2B1D0E" stroke-width="2.5" marker-end="url(#a)"/>
+<line x1="1150" y1="610" x2="1235" y2="440" stroke="#2B1D0E" stroke-width="2.5" marker-end="url(#a)"/>
+<line x1="1235" y1="560" x2="1195" y2="560" stroke="#2B1D0E" stroke-width="2.5" marker-end="url(#a)" stroke-dasharray="6 5"/>
+<text x="1196" y="545" class="c">/health</text>
+<text x="1242" y="648" class="c">IAM role: S3 · DynamoDB · Bedrock (no keys stored)</text>
+
+<!-- Training -->
+<rect x="430" y="700" width="760" height="150" rx="24" fill="#FFFDF7" stroke="#7A5A2E" stroke-width="3" stroke-dasharray="10 7"/>
+<text x="456" y="738" class="t">🏋️ Offline training (not on the request path)</text>
+<text x="456" y="770" class="s">Kaggle T4 · PyTorch / Ultralytics → ONNX (opset 12) → checked against cv.dnn → S3</text>
+<text x="456" y="800" class="s">Run 1: COCO + LVIS → 12 classes (mAP@50 0.280) · Run 2: + 984 keys photos (0.321, keys AP 0.751)</text>
+<text x="456" y="828" class="c">Verifier fusion fitted with cv.ml on our own FindMine-Home photos (found 0.62 · ask 0.43)</text>
+<path d="M1190 775 H1585 V305 H1565" fill="none" stroke="#2B1D0E" stroke-width="2.5" marker-end="url(#a)" stroke-dasharray="6 5"/><text x="1240" y="765" class="c">models → S3</text>
+<text x="40" y="870" class="c">Live frames are never stored. Each phone sees only its own items (random owner id). Delete my data removes photos, fingerprints and the record.</text>
+</svg></body></html>

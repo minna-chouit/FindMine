@@ -1,0 +1,81 @@
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>body{margin:0;background:#FFF8EA}text{font-family:"Atkinson Hyperlegible","Segoe UI",sans-serif;fill:#2B1D0E}
+.t{font-size:22px;font-weight:700}.s{font-size:15px}.h{font-size:30px;font-weight:700}.c{font-size:13px;fill:#5A4224}</style></head><body>
+<svg width="1600" height="900" viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#2B1D0E"/></marker></defs>
+<text x="40" y="52" class="h">FindMine · agent workflow (perceive → decide → act)</text>
+<text x="40" y="80" class="c">server/agent/search.py runs on every frame; Bedrock (Claude Haiku 4.5) is called only at the stuck points. Only the vision scores can say “found”.</text>
+
+<!-- start -->
+<rect x="40" y="140" width="210" height="90" rx="45" fill="#FFDCCB" stroke="#7A5A2E" stroke-width="3"/>
+<text x="68" y="180" class="t">🎤 “Find my</text><text x="68" y="206" class="t">bottle”</text>
+<line x1="250" y1="185" x2="320" y2="185" stroke="#2B1D0E" stroke-width="3" marker-end="url(#a)"/>
+
+<!-- SCAN -->
+<rect x="325" y="130" width="260" height="110" rx="20" fill="#FFDE7A" stroke="#7A5A2E" stroke-width="3"/>
+<text x="345" y="168" class="t">SCAN</text><text x="345" y="194" class="s">detect boxes of the class</text><text x="345" y="216" class="c">(+ tiles, + any-class fallback)</text>
+
+<!-- COACH -->
+<rect x="325" y="320" width="260" height="110" rx="20" fill="#FFFDF7" stroke="#7A5A2E" stroke-width="3"/>
+<text x="345" y="358" class="t">COACH</text><text x="345" y="384" class="s">dark · covered · smeared</text><text x="345" y="406" class="c">skip frame, speak the fix</text>
+<line x1="400" y1="245" x2="400" y2="315" stroke="#2B1D0E" stroke-width="2.5" marker-end="url(#a)"/>
+<line x1="510" y1="315" x2="510" y2="245" stroke="#2B1D0E" stroke-width="2.5" marker-end="url(#a)"/>
+<text x="410" y="285" class="c">bad frame</text><text x="520" y="285" class="c">good</text>
+
+<!-- VERIFY -->
+<line x1="585" y1="185" x2="660" y2="185" stroke="#2B1D0E" stroke-width="3" marker-end="url(#a)"/>
+<text x="592" y="172" class="c">candidate</text>
+<rect x="665" y="130" width="300" height="110" rx="20" fill="#FFDE7A" stroke="#7A5A2E" stroke-width="3"/>
+<text x="685" y="168" class="t">VERIFY: is it mine?</text><text x="685" y="194" class="s">fused score vs your 5 photos</text><text x="685" y="216" class="c">median of 3 frames</text>
+
+<!-- branches -->
+<rect x="1045" y="110" width="250" height="90" rx="18" fill="#FFFDF7" stroke="#1E6630" stroke-width="3"/>
+<text x="1065" y="146" class="t">≥ 0.62 → sure</text><text x="1065" y="174" class="s">“Found your bottle</text><text x="1065" y="194" class="s">at 2 o’clock”</text>
+<rect x="1045" y="230" width="250" height="90" rx="18" fill="#FFFDF7" stroke="#7A5A2E" stroke-width="3"/>
+<text x="1065" y="266" class="t">0.43–0.62, far</text><text x="1065" y="294" class="s">“Move closer so I can</text><text x="1065" y="314" class="s">check it’s yours”</text>
+<rect x="1045" y="350" width="250" height="90" rx="18" fill="#FFFDF7" stroke="#7A5A2E" stroke-width="3"/>
+<text x="1065" y="386" class="t">0.43–0.62, near</text><text x="1065" y="414" class="s">CONFIRM: “Is it yours?”</text><text x="1065" y="434" class="c">big Yes / No buttons</text>
+<rect x="1045" y="470" width="250" height="70" rx="18" fill="#FFFDF7" stroke="#9B1C12" stroke-width="3"/>
+<text x="1065" y="504" class="t">&lt; 0.43</text><text x="1065" y="528" class="s">stay silent, keep scanning</text>
+<line x1="965" y1="170" x2="1040" y2="155" stroke="#2B1D0E" stroke-width="2.5" marker-end="url(#a)"/>
+<line x1="965" y1="190" x2="1040" y2="275" stroke="#2B1D0E" stroke-width="2.5" marker-end="url(#a)"/>
+<line x1="965" y1="210" x2="1040" y2="395" stroke="#2B1D0E" stroke-width="2.5" marker-end="url(#a)"/>
+<line x1="965" y1="230" x2="1040" y2="505" stroke="#2B1D0E" stroke-width="2.5" marker-end="url(#a)"/>
+<path d="M1170 540 V585 H625 V215 H592" fill="none" stroke="#2B1D0E" stroke-width="2.5" stroke-dasharray="6 5" marker-end="url(#a)"/>
+<path d="M1170 320 C 1170 330, 1170 335, 1170 345" fill="none"/>
+<path d="M1045 285 C 1000 260, 980 240, 965 225" fill="none" stroke="#2B1D0E" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#a)"/>
+<text x="990" y="252" class="c">re-check</text>
+
+<!-- GUIDE + FOUND -->
+<rect x="1350" y="200" width="220" height="150" rx="20" fill="#FFDE7A" stroke="#7A5A2E" stroke-width="3"/>
+<text x="1370" y="238" class="t">GUIDE</text><text x="1370" y="264" class="s">CSRT + Kalman track</text><text x="1370" y="288" class="s">beeps · clock · vibration</text><text x="1370" y="312" class="c">“2 o’clock, arm’s length”</text>
+<line x1="1295" y1="155" x2="1375" y2="195" stroke="#2B1D0E" stroke-width="2.5" marker-end="url(#a)"/>
+<line x1="1295" y1="395" x2="1375" y2="355" stroke="#2B1D0E" stroke-width="2.5" marker-end="url(#a)"/>
+<text x="1305" y="388" class="c">yes</text>
+<path d="M1045 420 H1015 V585" fill="none" stroke="#2B1D0E" stroke-width="2.5" stroke-dasharray="6 5"/>
+<text x="700" y="608" class="c">“no”, or &lt; 0.43 → back to SCAN (that box is rejected for a while)</text>
+<rect x="1350" y="420" width="220" height="120" rx="20" fill="#1E6630"/>
+<text x="1370" y="458" class="t" style="fill:#fff">FOUND ✋</text><text x="1370" y="486" class="s" style="fill:#fff">user taps “Got it”</text><text x="1370" y="510" class="s" style="fill:#fff">→ last seen saved</text>
+<line x1="1460" y1="350" x2="1460" y2="415" stroke="#2B1D0E" stroke-width="3" marker-end="url(#a)"/>
+
+<!-- planner -->
+<rect x="40" y="620" width="560" height="230" rx="24" fill="#FFDCCB" stroke="#7A5A2E" stroke-width="3"/>
+<text x="64" y="660" class="t">🧠 Planner · Amazon Bedrock (Claude Haiku 4.5)</text>
+<text x="64" y="692" class="s">Called only when: no promising candidate for 20 s · bad frames for 8 s</text>
+<text x="64" y="716" class="s">· not found after 120 s</text>
+<text x="64" y="748" class="s">Gets a small JSON observation: state, picture quality, brightness,</text>
+<text x="64" y="770" class="s">best match so far, torch, last seen, language</text>
+<text x="64" y="802" class="s"><tspan font-weight="700">Tools:</tspan> speak · set_torch · ask_user  — never “found”</text>
+<text x="64" y="830" class="c">e.g. dark kitchen → set_torch(on) + “I’m turning on the light”</text>
+<path d="M360 437 V615" fill="none" stroke="#2B1D0E" stroke-width="2.5" marker-end="url(#a)"/>
+<text x="250" y="520" class="c">stuck (8 s / 20 s)</text>
+<path d="M500 615 V437" fill="none" stroke="#2B1D0E" stroke-width="2.5" stroke-dasharray="6 5" marker-end="url(#a)"/>
+<text x="510" y="530" class="c">advice / torch</text>
+
+<rect x="680" y="700" width="880" height="150" rx="24" fill="#FFFDF7" stroke="#7A5A2E" stroke-width="3"/>
+<text x="704" y="740" class="t">🔎 Every step is traced</text>
+<text x="704" y="772" class="s">/trace/&lt;session&gt;: what OpenCV saw (boxes, scores, picture quality), each decision,</text>
+<text x="704" y="796" class="s">the planner’s tool calls and latency. Baseline mode (test A): any box of the class = “found”.</text>
+<text x="704" y="826" class="c">Thresholds fitted on FindMine-Home: 0 of 75 look-alikes and 0 of 904 other-class boxes reached “found”.</text>
+</svg></body></html>
