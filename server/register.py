@@ -5,6 +5,8 @@ Endpoints
   POST /items/{item_id}/photos     form: photo (JPEG)          -> saves one reference photo
   GET  /items                                                  -> list of items
   GET  /items/{item_id}                                        -> one item
+  DELETE /items/{item_id}?owner=…                              -> deletes the item, its photos and fingerprints
+  DELETE /items?owner=…                                        -> "delete my data": every item of this phone
 
 load_refs(item_id) returns the stored feature dicts, ready for verifier(...) during search.
 """
@@ -127,6 +129,43 @@ def get_item(item_id: str):
     if not item:
         raise HTTPException(404, "item not found")
     return _public(item)
+
+
+def _delete_item(item):
+    """Remove an item everywhere: every S3 object under items/<id>/ (photos + fingerprints), the DynamoDB row,
+    and the in-memory fingerprint cache. Returns how many S3 objects were removed."""
+    item_id, removed = item["item_id"], 0
+    for page in s3.get_paginator("list_objects_v2").paginate(Bucket=BUCKET, Prefix=f"items/{item_id}/"):
+        keys = [{"Key": o["Key"]} for o in page.get("Contents", [])]
+        if keys:
+            s3.delete_objects(Bucket=BUCKET, Delete={"Objects": keys, "Quiet": True})
+            removed += len(keys)
+    table.delete_item(Key={"item_id": item_id})
+    for k in [k for k in _refs_cache if k[0] == item_id]:
+        del _refs_cache[k]
+    return removed
+
+
+@router.delete("/items/{item_id}")
+def delete_item(item_id: str, owner: str = ""):
+    """Delete one item. A phone can only delete items it registered (items with no owner: anyone, old data)."""
+    item = table.get_item(Key={"item_id": item_id}).get("Item")
+    if not item:
+        raise HTTPException(404, "item not found")
+    if item.get("owner") and item["owner"] != owner:
+        raise HTTPException(403, "this item belongs to another phone")
+    return {"deleted": [item_id], "files_removed": _delete_item(item)}
+
+
+@router.delete("/items")
+def delete_my_items(owner: str = ""):
+    """Delete my data: every item registered from this phone. Needs the owner id, so nobody can wipe everything."""
+    owner = owner.strip()
+    if not owner:
+        raise HTTPException(400, "owner is required")
+    mine = [i for i in table.scan().get("Items", []) if i.get("owner") == owner]
+    files = sum(_delete_item(i) for i in mine)
+    return {"deleted": [i["item_id"] for i in mine], "files_removed": files}
 
 
 def item_crop(img, cls):

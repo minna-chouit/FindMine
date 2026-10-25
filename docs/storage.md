@@ -50,8 +50,19 @@ Only with consent. The register page has an **unticked** box: *"Allow FindMine t
 - **Detector** (is there a key?): the photos are close-ups, so they need boxes drawn before training. Home videos/photos from the team are still the main source for small objects.
 - Nothing retrains automatically. Training is a manual step (Kaggle/NVIDIA → new `.onnx` → replace on the server).
 
+## Deleting data
+
+**Settings → My items and data** lists the items registered from this phone.
+
+- **Delete “my keys”** (tap twice): `DELETE /items/<id>?owner=<phone id>` removes every file under `items/<id>/` in S3, the DynamoDB row, and the server's cached fingerprints. A phone can't delete another phone's items (403).
+- **Delete all my data** (tap twice): `DELETE /items?owner=<phone id>` does the same for every item of this phone. Without an owner id it is refused (400), so one request can never wipe the table.
+- Test: `server/test_delete.py` (AWS faked in memory).
+
+## Privacy already in place
+
+- Faces are blurred in every stored registration photo (OpenCV 5 `FaceDetectorYN`, `server/pipeline/privacy.py`).
+- Live search frames are never stored.
+
 ## Still to do
 
-- **Delete my data** (Day 10): one button that removes an item's S3 folder and its DynamoDB row.
-- **Face blur** (Day 10): blur faces in registration photos before they are saved (project rule for anything stored).
 - Optional: S3 lifecycle rule to delete items not used for a year.

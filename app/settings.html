@@ -56,6 +56,12 @@
   </div>
   <p id="modeNote" class="small"></p>
 
+  <h2>My items and data</h2>
+  <p class="small">Items registered from this phone. Deleting removes the photos, their fingerprints and the record from our servers.</p>
+  <div id="myItems" aria-live="polite"><p class="small">Loading…</p></div>
+  <button id="wipe" class="btn btn-danger">Delete all my data</button>
+  <p id="wipeStatus" class="status" role="status" aria-live="polite"></p>
+
   <h2>Safety notice</h2>
   <button id="replay" class="btn btn-plain">Play the notice again</button>
 
@@ -150,6 +156,54 @@
     try { if (v) localStorage.setItem("findmine-server", v); else localStorage.removeItem("findmine-server"); } catch (e) {}
     location.reload();
   });
+
+  // ───── My items and data (delete) ─────
+  const ARM_MS = 5000;   // a delete button must be tapped twice within 5 s
+  function armed(btn, label, confirmLabel, action) {
+    btn.addEventListener("click", async () => {
+      if (btn.dataset.armed !== "1") {
+        btn.dataset.armed = "1"; btn.textContent = confirmLabel;
+        if ("speechSynthesis" in window) { speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(confirmLabel)); }
+        setTimeout(() => { if (btn.isConnected && btn.dataset.armed === "1") { btn.dataset.armed = ""; btn.textContent = label; } }, ARM_MS);
+        return;
+      }
+      btn.disabled = true;
+      try { await action(); } finally { btn.disabled = false; }
+    });
+  }
+  function done(text) {
+    document.getElementById("wipeStatus").textContent = text;
+    if ("speechSynthesis" in window) { speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(text)); }
+  }
+  async function loadMyItems() {
+    const box = document.getElementById("myItems");
+    try {
+      const items = await (await fetch(FM_SERVER + "/items?owner=" + encodeURIComponent(FM_OWNER))).json();
+      box.innerHTML = "";
+      if (!items.length) { box.innerHTML = '<p class="small">No items on this phone.</p>'; return; }
+      for (const it of items) {
+        const b = document.createElement("button");
+        const label = "Delete “" + it.name + "”";
+        b.className = "btn btn-plain";
+        b.textContent = label;
+        armed(b, label, "Tap again to delete “" + it.name + "”", async () => {
+          const r = await fetch(FM_SERVER + "/items/" + encodeURIComponent(it.item_id) + "?owner=" + encodeURIComponent(FM_OWNER), { method: "DELETE" });
+          done(r.ok ? "Deleted “" + it.name + "”." : "Couldn’t delete it (" + r.status + ").");
+          loadMyItems();
+        });
+        box.appendChild(b);
+      }
+    } catch (e) {
+      box.innerHTML = '<p class="small">Couldn’t reach the server.</p>';
+    }
+  }
+  armed(document.getElementById("wipe"), "Delete all my data", "Tap again to delete ALL your items", async () => {
+    const r = await fetch(FM_SERVER + "/items?owner=" + encodeURIComponent(FM_OWNER), { method: "DELETE" });
+    const out = r.ok ? await r.json() : null;
+    done(out ? "Deleted " + out.deleted.length + " items and " + out.files_removed + " files." : "Couldn’t delete (" + r.status + ").");
+    loadMyItems();
+  });
+  loadMyItems();
 </script>
 </body>
 </html>
