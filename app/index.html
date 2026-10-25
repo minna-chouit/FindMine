@@ -17,6 +17,7 @@
   .brand { text-align:center; margin: .5rem 0 1.25rem; }
   .brand h1 { margin: 0; }
   .brand img { width: min(85%, 20rem); height: auto; }
+  #start { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12rem); }
   .heard { text-align:center; min-height:1.5em; }
   .mode { text-align:center; font-weight:700; color: var(--danger); min-height:1.2em; }
 </style>
@@ -28,6 +29,11 @@
   <span class="sr-only">FindMine.</span>
   <small id="startHint">Tap anywhere to start.</small>
 </button>
+<div id="themePick" class="theme-pick" role="group" aria-labelledby="lLook">
+  <p id="lLook">Choose a look</p>
+  <button type="button" class="swatch swatch-light" data-look="light"><svg class="dot" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="5" fill="#FFDE7A" stroke="#1E2252" stroke-width="2"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3M4.6 4.6l2.1 2.1M17.3 17.3l2.1 2.1M4.6 19.4l2.1-2.1M17.3 6.7l2.1-2.1" stroke="#1E2252" stroke-width="2" stroke-linecap="round"/></svg><span id="lLight">Light</span></button>
+  <button type="button" class="swatch swatch-dark" data-look="dark"><svg class="dot" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z" fill="#FFDE7A"/></svg><span id="lDark">Dark</span></button>
+</div>
 
 <main class="wrap">
   <div class="brand">
@@ -62,19 +68,19 @@
 <script>
   const L = {
     en: { tag: "Find your own things, by voice and sound.", find: "Find my item", voice: "Ask by voice", reg: "Register an item", set: "Settings", install: "📲 Install FindMine on this phone",
-          mic: "Speak", listening: "Listening…", tap: "Tap anywhere to start.", heard: "I heard: ",
+          mic: "Speak", listening: "Listening…", tap: "Tap anywhere to start.", look: "Choose a look", light: "Light", dark: "Dark", heard: "I heard: ",
           welcome: "Welcome to FindMine. Say “find my” and an item, or “register” to add one.",
           again: "Sorry, I didn’t catch that. Tap the big button at the top and try again." },
     fr: { tag: "Retrouvez vos objets, à la voix et au son.", find: "Trouver mon objet", voice: "Demander à la voix", reg: "Enregistrer un objet", set: "Réglages", install: "📲 Installer FindMine sur ce téléphone",
-          mic: "Parler", listening: "J’écoute…", tap: "Touchez l’écran pour commencer.", heard: "J’ai entendu : ",
+          mic: "Parler", listening: "J’écoute…", tap: "Touchez l’écran pour commencer.", look: "Choisissez l’apparence", light: "Clair", dark: "Sombre", heard: "J’ai entendu : ",
           welcome: "Bienvenue dans FindMine. Dites « trouve mon » et un objet, ou « enregistrer » pour en ajouter un.",
           again: "Désolé, je n’ai pas compris. Touchez le grand bouton en haut et réessayez." },
     ar: { tag: "اعثر على أغراضك بالصوت.", find: "ابحث عن غرضي", voice: "اسأل بالصوت", reg: "سجّل غرضًا", set: "الإعدادات", install: "📲 ثبّت FindMine على هذا الهاتف",
-          mic: "تكلّم", listening: "أنا أستمع…", tap: "المس الشاشة للبدء.", heard: "سمعت: ",
+          mic: "تكلّم", listening: "أنا أستمع…", tap: "المس الشاشة للبدء.", look: "اختر المظهر", light: "فاتح", dark: "داكن", heard: "سمعت: ",
           welcome: "مرحبًا بك في FindMine. قل «ابحث عن» واسم الغرض، أو «سجّل» لإضافة غرض.",
           again: "عفوًا، لم أفهم. المس الزر الكبير في الأعلى وحاول مرة أخرى." },
     dz: { tag: "لقى الحوايج تاعك بالصوت.", find: "قلّب على حاجتي", voice: "اسقسي بالصوت", reg: "سجّل حاجة", set: "الإعدادات", install: "📲 ركّب FindMine في التيليفون",
-          mic: "هدر", listening: "راني نسمع…", tap: "اضغط على الشاشة باش تبدا.", heard: "سمعت: ",
+          mic: "هدر", listening: "راني نسمع…", tap: "اضغط على الشاشة باش تبدا.", look: "اختار الشكل", light: "فاتح", dark: "داكن", heard: "سمعت: ",
           welcome: "مرحبا بيك في FindMine. قول «وين» واسم الحاجة، ولا «سجّل» باش تزيد حاجة.",
           again: "سمحلي، ما فهمتكش. اضغط على البوطونة الكبيرة لفوق وعاود." },
   };
@@ -89,6 +95,9 @@
   document.getElementById("install").textContent = l.install;
   document.getElementById("lMic").textContent = l.mic;
   document.getElementById("startHint").textContent = l.tap;
+  document.getElementById("lLook").textContent = l.look;
+  document.getElementById("lLight").textContent = l.light;
+  document.getElementById("lDark").textContent = l.dark;
   if (FM.mode === "baseline") document.getElementById("mode").textContent = "Baseline mode is ON (test A)";
 
   // ───── Spoken start + voice commands ─────
@@ -142,12 +151,29 @@
   // Start screen: once per visit. Speaks the notice (first time ever), the welcome, then listens.
   let firstVisit = true;
   try { firstVisit = sessionStorage.getItem("findmine-started") !== "1"; } catch (e) {}
-  if (!firstVisit) $("start").remove();
+  // Look picker (light / dark), shown with the start screen. Remembered on this phone, same as Settings → Colours.
+  function currentLook() {
+    const set = document.documentElement.getAttribute("data-theme");
+    if (set === "light" || set === "dark") return set;
+    return window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  }
+  function markLook() {
+    document.querySelectorAll("[data-look]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.look === currentLook())));
+  }
+  document.querySelectorAll("[data-look]").forEach((b) => b.addEventListener("click", () => {
+    try { localStorage.setItem("findmine-theme", b.dataset.look); } catch (e) {}
+    document.documentElement.setAttribute("data-theme", b.dataset.look);
+    markLook();
+  }));
+  markLook();
+
+  if (!firstVisit) { $("start").remove(); $("themePick").remove(); }
   else {
     $("start").focus();
     $("start").addEventListener("click", () => {
       try { sessionStorage.setItem("findmine-started", "1"); } catch (e) {}
       $("start").remove();
+      $("themePick").remove();
       const texts = FM.disclaimerSeen() ? [l.welcome] : [FM.t("disclaimer"), l.welcome];
       FM.markDisclaimerSeen();
       speakAll(texts, listen);

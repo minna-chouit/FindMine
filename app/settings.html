@@ -14,7 +14,8 @@
 <script src="js/config.js"></script>
 <link rel="stylesheet" href="css/app.css">
 <style>
-  td[dir="rtl"] { text-align:right; }
+  .sentences [dir="rtl"] { text-align:right; }
+  details.section > summary .small { font-weight: 400; }
 </style>
 </head>
 <body>
@@ -24,57 +25,87 @@
     <h1>Settings</h1>
   </header>
 
-  <h2>Language</h2>
-  <div id="langs" class="grid-4" role="group" aria-label="Language"></div>
-  <p id="voice" class="small"></p>
-
-  <h2>How much should it talk?</h2>
-  <div class="grid-2" role="group" aria-label="Talk">
-    <button class="btn" data-vb="short">Short</button>
-    <button class="btn" data-vb="detailed">Detailed</button>
-  </div>
-
-  <h2>Text size</h2>
-  <div class="grid-3" role="group" aria-label="Text size">
-    <button class="btn" data-size="normal">A</button>
-    <button class="btn" data-size="large" style="font-size:1.4rem">A</button>
-    <button class="btn" data-size="xl" style="font-size:1.7rem">A</button>
-  </div>
-  <p class="small">Normal · Large · Extra large</p>
-
-  <h2>Colours</h2>
-  <div class="grid-3" role="group" aria-label="Colours">
-    <button class="btn" data-theme-btn="auto">Auto</button>
-    <button class="btn" data-theme-btn="light">Light</button>
-    <button class="btn" data-theme-btn="dark">Dark</button>
-  </div>
-
-  <h2>Test mode</h2>
-  <div class="grid-2" role="group" aria-label="Test mode">
-    <button class="btn" data-mode="full">Full app</button>
-    <button class="btn" data-mode="baseline">Baseline (test A)</button>
-  </div>
-  <p id="modeNote" class="small"></p>
-
-  <h2>My items and data</h2>
-  <p class="small">Items registered from this phone. Deleting removes the photos, their fingerprints and the record from our servers.</p>
-  <div id="myItems" aria-live="polite"><p class="small">Loading…</p></div>
-  <button id="wipe" class="btn btn-danger">Delete all my data</button>
-  <p id="wipeStatus" class="status" role="status" aria-live="polite"></p>
-
-  <h2>Safety notice</h2>
-  <button id="replay" class="btn btn-plain">Play the notice again</button>
-
-  <details>
-    <summary>Team: server address</summary>
-    <p id="serverNow" class="small"></p>
-    <label for="server">Server (leave empty for the default)</label>
-    <input id="server" type="text" placeholder="https://54-90-98-230.sslip.io" autocomplete="off">
-    <button id="saveServer" class="btn btn-plain">Save and reload</button>
+  <details class="section" open>
+    <summary><span>Language <span class="small" id="sumLang"></span></span></summary>
+    <div class="body">
+      <div id="langs" class="grid-4" role="group" aria-label="Language"></div>
+      <p id="voice" class="small"></p>
+    </div>
   </details>
 
-  <h2>All sentences (tap ▶ to listen)</h2>
-  <div class="scroll"><table id="table"></table></div>
+  <details class="section">
+    <summary><span>Look and text size <span class="small" id="sumLook"></span></span></summary>
+    <div class="body">
+      <h3>Colours</h3>
+      <div class="grid-3" role="group" aria-label="Colours">
+        <button class="btn" data-theme-btn="auto">Auto</button>
+        <button class="btn" data-theme-btn="light">Light</button>
+        <button class="btn" data-theme-btn="dark">Dark</button>
+      </div>
+      <p class="small">Auto follows your phone. Light is cream with dark blue writing; Dark is navy with pale writing.</p>
+      <h3>Text size</h3>
+      <div class="grid-3" role="group" aria-label="Text size">
+        <button class="btn" data-size="normal" aria-label="Normal">A</button>
+        <button class="btn" data-size="large" aria-label="Large" style="font-size:1.4rem">A</button>
+        <button class="btn" data-size="xl" aria-label="Extra large" style="font-size:1.7rem">A</button>
+      </div>
+      <p class="small">Normal · Large · Extra large</p>
+    </div>
+  </details>
+
+  <details class="section">
+    <summary><span>How much it talks <span class="small" id="sumTalk"></span></span></summary>
+    <div class="body">
+      <div class="grid-2" role="group" aria-label="Talk">
+        <button class="btn" data-vb="short">Short</button>
+        <button class="btn" data-vb="detailed">Detailed</button>
+      </div>
+    </div>
+  </details>
+
+  <details class="section">
+    <summary><span>My items and data</span></summary>
+    <div class="body">
+      <p class="small">Items registered from this phone. Deleting removes the photos, their fingerprints and the record from our servers.</p>
+      <div id="myItems" aria-live="polite"><p class="small">Loading…</p></div>
+      <button id="wipe" class="btn btn-danger">Delete all my data</button>
+      <p id="wipeStatus" class="status" role="status" aria-live="polite"></p>
+    </div>
+  </details>
+
+  <details class="section">
+    <summary><span>Safety notice</span></summary>
+    <div class="body">
+      <button id="replay" class="btn btn-plain">Play the notice again</button>
+    </div>
+  </details>
+
+  <details class="section">
+    <summary><span>All sentences</span></summary>
+    <div class="body">
+      <label for="sentLang">Language</label>
+      <select id="sentLang"></select>
+      <p class="small">Tap ▶ to hear a sentence.</p>
+      <ul id="table" class="sentences"></ul>
+    </div>
+  </details>
+
+  <details class="section">
+    <summary><span>Team</span></summary>
+    <div class="body">
+      <h3>Test mode</h3>
+      <div class="grid-2" role="group" aria-label="Test mode">
+        <button class="btn" data-mode="full">Full app</button>
+        <button class="btn" data-mode="baseline">Baseline (test A)</button>
+      </div>
+      <p id="modeNote" class="small"></p>
+      <h3>Server address</h3>
+      <p id="serverNow" class="small"></p>
+      <label for="server">Server (leave empty for the default)</label>
+      <input id="server" type="text" placeholder="https://54-90-98-230.sslip.io" autocomplete="off">
+      <button id="saveServer" class="btn btn-plain">Save and reload</button>
+    </div>
+  </details>
 </main>
 <script src="js/prompts.js"></script>
 <script>
@@ -97,30 +128,33 @@
     document.getElementById("voice").textContent = FM.hasVoice()
       ? "Voice for " + name + " found on this phone ✓"
       : "No voice for " + name + " on this phone. Install it in Settings → Text-to-speech → Google → Install voice data.";
+    document.getElementById("sumLang").textContent = "· " + name;
+    const looks = { auto: "Auto", light: "Light", dark: "Dark" }, sizes = { normal: "Normal", large: "Large", xl: "Extra large" };
+    document.getElementById("sumLook").textContent = "· " + looks[curTheme] + ", " + (sizes[curText] || "Normal");
+    document.getElementById("sumTalk").textContent = "· " + (FM.verbosity === "detailed" ? "Detailed" : "Short");
     buildTable();
   }
 
   function buildTable() {
-    const keys = Object.keys(FM.PROMPTS.en);
-    let html = "<tr><th>Key</th>" + LANGS.map((l) => "<th>" + FM.LANG_INFO[l].name + "</th>").join("") + "</tr>";
-    for (const k of keys) {
-      html += "<tr><td class='key'>" + k + "</td>";
-      for (const l of LANGS) {
-        const text = FM.t(k, SAMPLE, { lang: l });
-        const dir = FM.LANG_INFO[l].dir;
-        html += "<td dir='" + dir + "'><button aria-label='Play' data-k='" + k + "' data-pl='" + l + "'>▶</button> " +
-                text.replace(/</g, "&lt;") + "</td>";
-      }
-      html += "</tr>";
+    const sel = document.getElementById("sentLang");
+    if (!sel.options.length) {
+      sel.innerHTML = LANGS.map((l) => "<option value='" + l + "'>" + FM.LANG_INFO[l].name + "</option>").join("");
+      sel.value = FM.lang;
+      sel.addEventListener("change", buildTable);
     }
-    document.getElementById("table").innerHTML = html;
+    const l = sel.value || FM.lang;
+    const dir = FM.LANG_INFO[l].dir;
+    const esc = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+    document.getElementById("table").innerHTML = Object.keys(FM.PROMPTS.en).map((k) =>
+      "<li><button aria-label='Play' data-k='" + k + "' data-pl='" + l + "'>▶</button>" +
+      "<span dir='" + dir + "'><span class='key' dir='ltr'>" + k + "</span>" + esc(FM.t(k, SAMPLE, { lang: l })) + "</span></li>").join("");
   }
 
   document.getElementById("langs").innerHTML = LANGS.map((l) =>
     "<button class='btn' data-l='" + l + "'>" + FM.LANG_INFO[l].name + "</button>").join("");
   document.getElementById("langs").addEventListener("click", (e) => {
     const b = e.target.closest("[data-l]"); if (!b) return;
-    FM.setLang(b.dataset.l); refresh(); FM.say("welcome", {}, { interrupt: true });
+    FM.setLang(b.dataset.l); document.getElementById("sentLang").value = b.dataset.l; refresh(); FM.say("welcome", {}, { interrupt: true });
   });
   document.querySelectorAll("[data-vb]").forEach((b) => b.addEventListener("click", () => {
     FM.setVerbosity(b.dataset.vb); refresh(); FM.say("searching", SAMPLE, { interrupt: true });
