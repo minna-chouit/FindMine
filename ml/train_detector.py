@@ -20,12 +20,18 @@ ap.add_argument("--model", default="yolo11n.pt")
 ap.add_argument("--epochs", type=int, default=70)
 ap.add_argument("--batch", type=int, default=-1)
 ap.add_argument("--imgsz", type=int, default=640)
+ap.add_argument("--name", default="findmine_run1")
+# Fine-tune (run 2, from run 1's best.pt): small lr0, no warm-up (run 1's warm-up hurt epochs 2-4).
+ap.add_argument("--lr0", type=float, default=0.01)
+ap.add_argument("--warmup-epochs", type=float, default=3.0)
+ap.add_argument("--close-mosaic", type=int, default=10)
 a = ap.parse_args()
 
 YOLO(a.model).train(
-    data=a.data, epochs=a.epochs, batch=a.batch, imgsz=a.imgsz, name="findmine_run1",
+    data=a.data, epochs=a.epochs, batch=a.batch, imgsz=a.imgsz, name=a.name,
+    lr0=a.lr0, warmup_epochs=a.warmup_epochs, close_mosaic=a.close_mosaic,
     # Our users: dark rooms, shaky phones, objects cut at the frame edge.
-    hsv_v=0.6, degrees=10, translate=0.2, scale=0.6, mosaic=1.0, close_mosaic=10,
+    hsv_v=0.6, degrees=10, translate=0.2, scale=0.6, mosaic=1.0,
     # ponytail: motion blur / low-light gamma+noise come from Ultralytics' built-in albumentations
     # (Blur, MedianBlur, CLAHE) when albumentations is installed; add a custom transform if the
     # FindMine-Home dark/blur split stays weak after run 1.
