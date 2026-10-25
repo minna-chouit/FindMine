@@ -30,7 +30,12 @@ ALIASES = {"key": "keys", "keys": "keys", "car key": "keys", "house key": "keys"
            "earphones": "earbuds", "earphone": "earbuds", "airpods case": "earbuds", "earbuds case": "earbuds",
            "medicine": "medicine", "medicines": "medicine", "medication": "medicine", "pill bottle": "medicine",
            "pills": "medicine", "pill": "medicine", "medicine box": "medicine", "medicine bottle": "medicine",
-           "blister pack": "medicine", "blister": "medicine"}
+           "blister pack": "medicine", "blister": "medicine",
+           "ear device": "earbuds", "eardevice": "earbuds"}   # aquamanj/pen-calculator-earbuds
+# teknofest-r4zmp/medicine-d7ttn labels each medicine box by brand: all of them are our "medicine"
+ALIASES.update({b: "medicine" for b in (
+    "a ferin", "apranax", "arveles", "ben gay", "benexol b12", "coldaway c", "coledan d", "devit 3",
+    "dolorex", "gaviscon", "iburamincold", "lansor", "majezik", "parol", "rennie", "tylolhot")})
 IMG = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
 
 

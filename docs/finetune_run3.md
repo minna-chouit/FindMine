@@ -70,6 +70,17 @@ Quick local check of an export, without Kaggle:
 ml/.venv/Scripts/python -c "import sys; sys.path.insert(0,'ml'); from build_finetune import *; n=read_names(sys.argv[1]); print([(x, ALIASES.get(norm(x), 'DROPPED')) for x in n])" PATH/TO/EXPORT/data.yaml
 ```
 
+**Chosen (Oct 25), all mapped in `ALIASES`, checked by `ml/test_build_finetune.py`:**
+
+| class | Universe project | licence | names → ours |
+|---|---|---|---|
+| wallet | senior-project-final-datasets/wallet-nfk4a | Public Domain | Wallet → wallet |
+| earbuds | aquamanj/pen-calculator-earbuds-ecdso (v4) | CC BY 4.0 | Ear Device, EarDevice → earbuds; Calculator, Pen dropped |
+| medicine | teknofest-r4zmp/medicine-d7ttn (v4) | CC BY 4.0 | all 16 brand names (A-FERIN … TYLOLHOT) → medicine |
+
+The medicine set is printed medicine **boxes**, not pill bottles, so make `medicine__my_medicine` a box if you
+can (a bottle is still a fair test, just a harder one).
+
 ## Step 3: start the Kaggle run (10 min, then sleep)
 
 1. kaggle.com → Datasets → New Dataset: upload each new zip as its own dataset.

@@ -10,6 +10,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from build_finetune import ALIASES, build, norm, read_names  # noqa: E402
 
 assert ALIASES[norm("Pill_Bottle")] == "medicine" and ALIASES[norm(" AirPods-Case ")] == "earbuds"
+# the three run-3 exports (names as in their data.yaml)
+assert [ALIASES.get(norm(n)) for n in ["Wallet", "Calculator", "Ear Device", "EarDevice", "Pen"]] == \
+    ["wallet", None, "earbuds", "earbuds", None]
+assert all(ALIASES.get(norm(n)) == "medicine" for n in [
+    "A-FERIN", "APRANAX", "ARVELES", "BEN-GAY", "BENEXOL B12", "COLDAWAY C", "COLEDAN-D", "DEVIT-3",
+    "DOLOREX", "GAVISCON", "IBURAMINCOLD", "LANSOR", "MAJEZIK", "Parol", "RENNIE", "TYLOLHOT"])
 
 
 def touch(p, text=""):
