@@ -57,7 +57,7 @@ export. Pipeline per frame (`server/main.py`):
   run-1 image of a weak class, and 6,000 run-1 images replayed so it doesn't forget. val mAP@50 0.268 → **0.321**;
   keys AP@50 0.004 → 0.751 (optimistic: those val images come from the same keys dataset).
   `ml/kaggle_finetune_run2.ipynb`, `docs/finetune_keys.md`.
-- Detector run 3, trained Oct 25–26, **not deployed yet** (`eval/run3_report.md`): fine-tuned from run 2 with
+- Detector run 3, trained Oct 25–26, **not deployed** (`eval/run3_report.md`): fine-tuned from run 2 with
   public wallet, earbuds and medicine-box sets (Roboflow Universe) plus the keys set, same recipe. val mAP@50
   0.317 → **0.413**; wallet AP@50 0.168 → 0.869, earbuds 0.051 → 0.406, medicine 0.058 → 0.135, keys 0.677 → 0.778
   (optimistic again: val images come from the training sources). `ml/kaggle_finetune_run3.ipynb`, `docs/finetune_run3.md`.
@@ -126,11 +126,13 @@ while nothing of the item's class is in view), mostly below the 0.25 threshold. 
 are 1–2 frames each. With run 2 the look-alike checks are unchanged: 0 of 75 same-class look-alikes and 0 of 939
 other-class boxes at or above *found*.
 
-**Run 3** (`eval/run3_report.md`, `eval/detector_compare_run3.md`): no item drops more than 10 points (bags −1 to
-−7, phone +5); the headphones, counted as earbuds, go from 17% to **45%**; keys with tiles at 0.25 go from 8/40
-to **21/40**, and false keys boxes on other items' frames fall from 21/265 to 6/265. Look-alike safety is unchanged
-(0 of 75 at *found*; 0 of 956 other-class boxes at *found* or *ask*). We have no wallet or medicine photos of our
-own yet, so by our rule run 3 is not deployed until those classes are tested on them.
+**Run 3** (`eval/run3_report.md`, `eval/detector_compare_run3.md`, `ml/eval_tiles.py`), tested on our own wallets
+and medicine (box, bottle, blister pack) added for it: no item drops more than 10 points; headphones (as earbuds)
+17% → **45%**; keys with tiles 8/40 → **21/40** with fewer false keys boxes (21 → 6 of 292 frames). But wallets
+are only learned up close (0/13 → 5/13 close-ups, room shots with tiles 3/10 → 1/10) and false wallet boxes rise
+from 2 to 45 of 322 frames; the public medicine-box set did not transfer to our medicine (0/14 close-ups for
+both). So **run 2 stays deployed**: public product photos taught the close-up look, not the small object in a
+room that a search sees.
 
 ### 6.3 Camera coach: blur is a hint, not a reason to skip (bottle/cup/bag/phone videos, 367 frames at 5 fps)
 

@@ -116,10 +116,10 @@ exports are missing (no silent fallback to stock YOLO). Expected 2–3 h (≈ 11
    `docs/finetune_keys.md`) is your call, given the demo depends on production. Otherwise run 2 stays and run 3
    is a result in the report. `docs/report.md` and `eval/` get updated either way.
 
-**Done Oct 26 (`eval/run3_report.md`):** run 3 trained (`models/findmine12_run3.onnx`, sha256 `2ea63ceb…`), val
-mAP@50 0.317 → 0.413. On our photos nothing drops > 10 points, earbuds (headphones item) 17% → 45%, keys with tiles
-8/40 → 21/40 (`ml/eval_keys_tiles.py`), safety 0/75 and 0/956. Verdict KEEP RUN 2 only because there are no wallet /
-medicine home photos yet: shoot them (step 1, `my_` folders are enough), then re-run the compare command above.
+**Done Oct 26 (`eval/run3_report.md`): not deployed, run 2 stays.** Run 3 (`models/findmine12_run3.onnx`, sha256
+`2ea63ceb…`) improved earbuds (headphones 17% → 45%) and keys with tiles (8/40 → 21/40), but on our own photos
+wallets were only learned up close and false wallet boxes rose from 2 to 45 of 322 frames, and medicine did not
+improve at all (`ml/eval_tiles.py --cls wallet|medicine|keys`).
 
 ## Files
 
