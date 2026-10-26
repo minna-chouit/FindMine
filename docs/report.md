@@ -57,6 +57,10 @@ export. Pipeline per frame (`server/main.py`):
   run-1 image of a weak class, and 6,000 run-1 images replayed so it doesn't forget. val mAP@50 0.268 → **0.321**;
   keys AP@50 0.004 → 0.751 (optimistic: those val images come from the same keys dataset).
   `ml/kaggle_finetune_run2.ipynb`, `docs/finetune_keys.md`.
+- Detector run 3, trained Oct 25–26, **not deployed yet** (`eval/run3_report.md`): fine-tuned from run 2 with
+  public wallet, earbuds and medicine-box sets (Roboflow Universe) plus the keys set, same recipe. val mAP@50
+  0.317 → **0.413**; wallet AP@50 0.168 → 0.869, earbuds 0.051 → 0.406, medicine 0.058 → 0.135, keys 0.677 → 0.778
+  (optimistic again: val images come from the training sources). `ml/kaggle_finetune_run3.ipynb`, `docs/finetune_run3.md`.
 - Verifier: DINOv2-small in cv.dnn (cosine to PyTorch ≥ 0.9993, 110 ms/crop on a laptop; needs an export
   wrapper, see `docs/spikes.md`). Fusion weights fitted with `cv.ml` on our own photos: bias −1.81,
   embedding 1.73, geometry 0.57, colour 1.02.
@@ -101,7 +105,8 @@ actions, planner tools and latency) is logged and replayed at `/trace/<session>`
 
 **FindMine-Home** (`data/home`): our own photos and videos of 10 personal items in 6 classes (3 bags,
 2 bottles, 2 sets of keys, cup, phone, headphones): 5 reference photos per item, test photos and videos in rooms,
-with look-alikes. Public data: COCO 2017, LVIS v1 (detector), Roboflow Universe keys (run 2, CC BY 4.0).
+with look-alikes. Public data: COCO 2017, LVIS v1 (detector), Roboflow Universe keys (run 2), wallet, earbuds and medicine
+boxes (run 3).
 
 ### 6.2 Detection on our own videos (`ml/compare_detectors.py`, conf 0.25, 2 fps; never used for training)
 
@@ -120,6 +125,12 @@ only a few dozen pixels wide, so they are found mainly by the tile search (the s
 while nothing of the item's class is in view), mostly below the 0.25 threshold. The small drops on cup and phone
 are 1–2 frames each. With run 2 the look-alike checks are unchanged: 0 of 75 same-class look-alikes and 0 of 939
 other-class boxes at or above *found*.
+
+**Run 3** (`eval/run3_report.md`, `eval/detector_compare_run3.md`): no item drops more than 10 points (bags −1 to
+−7, phone +5); the headphones, counted as earbuds, go from 17% to **45%**; keys with tiles at 0.25 go from 8/40
+to **21/40**, and false keys boxes on other items' frames fall from 21/265 to 6/265. Look-alike safety is unchanged
+(0 of 75 at *found*; 0 of 956 other-class boxes at *found* or *ask*). We have no wallet or medicine photos of our
+own yet, so by our rule run 3 is not deployed until those classes are tested on them.
 
 ### 6.3 Camera coach: blur is a hint, not a reason to skip (bottle/cup/bag/phone videos, 367 frames at 5 fps)
 
@@ -208,10 +219,13 @@ Laptop CPU: detector 64 ms/frame (run 2 is the same YOLO11n size), DINOv2 110 ms
 
 See `README.md`: `pip install -r requirements.txt` · `infra/deploy.sh` on EC2 · tests: `server/test_*.py` ·
 evaluation: `ml/eval_home.py`, `ml/eval_cross_class.py`, `ml/compare_detectors.py` · training:
-`ml/kaggle_train_run1.ipynb`, `ml/kaggle_finetune_run2.ipynb` (`docs/finetune_keys.md`).
+`ml/kaggle_train_run1.ipynb`, `ml/kaggle_finetune_run2.ipynb` (`docs/finetune_keys.md`),
+`ml/kaggle_finetune_run3.ipynb` (`docs/finetune_run3.md`).
 
 ## Credits
 
 COCO 2017 (annotations CC BY 4.0), LVIS v1 (CC BY 4.0), Roboflow Universe keys dataset by main-m4puh
-(keys-wd8b7, CC BY 4.0), YOLO11 (Ultralytics, AGPL-3.0), DINOv2 (Meta, Apache-2.0), YuNet face detector
+(keys-wd8b7, CC BY 4.0), wallet by senior-project-final-datasets (wallet-nfk4a, Public Domain), earbuds by
+aquamanj (pen-calculator-earbuds-ecdso, CC BY 4.0), medicine boxes by teknofest-r4zmp (medicine-d7ttn, CC BY 4.0),
+YOLO11 (Ultralytics, AGPL-3.0), DINOv2 (Meta, Apache-2.0), YuNet face detector
 (OpenCV model zoo, MIT), OpenCV 5 (Apache-2.0).
