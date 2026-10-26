@@ -32,6 +32,12 @@
   var wave = '<svg class="POS" viewBox="0 0 400 300" fill="none" focusable="false">' +
     '<path class="a" d="M10 290 C 90 200, 120 120, 220 120 S 360 40, 390 10" stroke-width="46" stroke-linecap="round"/>' +
     '<path class="b" d="M70 300 C 140 230, 180 170, 260 170 S 380 110, 400 70" stroke-width="30" stroke-linecap="round"/></svg>';
+  // iOS Safari only speaks after speech was started by a tap: unlock it on the first touch, silently.
+  function unlockSpeech() {
+    try { if ("speechSynthesis" in window) { var u = new SpeechSynthesisUtterance(" "); u.volume = 0; speechSynthesis.speak(u); } } catch (e) {}
+  }
+  document.addEventListener("pointerdown", unlockSpeech, { once: true, capture: true });
+
   document.addEventListener("DOMContentLoaded", function () {
     document.body.insertAdjacentHTML("afterbegin",
       '<div class="waves" aria-hidden="true">' + wave.replace("POS", "top") + wave.replace("POS", "bottom") + "</div>");

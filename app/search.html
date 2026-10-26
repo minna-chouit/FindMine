@@ -177,7 +177,7 @@
 
   function handleActions(actions) {
     for (const a of actions || []) {
-      if (a.type === "speak") speak(textOf(a.text), ["found", "planner", "ask", "closer", "is_this_yours", "confirm"].includes(a.key));
+      if (a.type === "speak") speak(textOf(a.text), ["found", "planner", "ask", "closer", "done", "lost", "guide", "not_found", "is_this_yours", "confirm"].includes(a.key));
       else if (a.type === "ask_user") { askOpen = true; $("ask").classList.remove("hidden"); }
       else if (a.type === "guide") onGuide(a);
       else if (a.type === "torch") setTorch(!!a.on);
@@ -202,7 +202,17 @@
       // Coming from find.html (voice) or a link like search.html?item=abc
       const wanted = new URLSearchParams(location.search).get("item");
       const hit = items.find((i) => i.item_id === wanted);
-      if (hit) start(hit);
+      if (hit) {
+        const go = document.createElement("button");
+        go.type = "button"; go.className = "cover";
+        go.innerHTML = '<span aria-hidden="true" style="font-size:3rem">🔎</span><span></span><small></small>';
+        go.children[1].textContent = FM.t("searching", { item: hit.name }, { verbosity: "short" });
+        go.children[2].textContent = { en: "Tap anywhere to start.", fr: "Touchez l’écran pour commencer.",
+                                       ar: "المس الشاشة للبدء.", dz: "اضغط على الشاشة باش تبدا." }[FM.lang] || "Tap anywhere to start.";
+        go.addEventListener("click", () => { go.remove(); start(hit); });
+        document.body.appendChild(go);
+        go.focus();
+      }
     } catch (e) {
       $("pickMsg").textContent = "Couldn’t reach the server. Check it’s running, then reload.";
     }
@@ -211,6 +221,9 @@
   // ---------- Search ----------
   async function start(it) {
     item = it;
+    // iOS: speech and sound must start during the tap, before any "await", or Safari blocks them for the whole search
+    try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume(); } catch (e) {}
+    speak(FM.t("searching", { item: it.name }), true);
     try {
       video.srcObject = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
       await video.play();
@@ -223,7 +236,6 @@
     running = true; askOpen = false; torchOn = false;
     showState(null);
     startAudio();
-    speak(FM.t("searching", { item: it.name }), true);
     connect();
     timer = setInterval(sendFrame, 1000 / FPS);
   }
