@@ -205,3 +205,25 @@ td button { min-width: 2.75rem; min-height: 2.75rem; border: 2px solid var(--bor
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 @media (prefers-contrast: more) { :root { --text-soft: var(--text); --border: var(--text); } .waves { display: none; } }
 @media (forced-colors: active) { .btn, .card, input, select { border: 2px solid ButtonText; } .waves { display: none; } }
+
+/* ───── Reflow at large text (WCAG 1.4.10 / 1.4.4) ─────
+ * Grids choose their own number of columns: a cell needs at least N rem, and rem grows with the text-size setting,
+ * so at Large / Extra large the buttons stack instead of overflowing. Long words wrap instead of widening the page.
+ */
+.grid-2, .grid-3, .grid-4, .links, .theme-pick {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--cell, 8rem)), 1fr));
+}
+.grid-2 { --cell: 7rem; }
+.grid-3 { --cell: 7.5rem; }
+.grid-4 { --cell: 8rem; }
+.links { --cell: 9rem; }
+.theme-pick { --cell: 9rem; }
+.btn, .swatch, summary, label, h1, h2, p, .said, .status, .big-readout {
+  min-width: 0; overflow-wrap: break-word; hyphens: auto;
+}
+.topbar > h1 { min-width: 0; flex: 1; }
+.typed { flex-wrap: wrap; }
+.typed input { flex: 1 1 9rem; min-width: 0; }
+.typed .btn { flex: 0 0 auto; }
+img, svg, video, canvas { max-width: 100%; }
+.key, code { overflow-wrap: anywhere; }   /* long identifiers like didnt_understand may break anywhere */
