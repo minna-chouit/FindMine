@@ -117,7 +117,7 @@ boxes (run 3).
 | phone | 17/21 (81%) | 15/21 (71%) |
 | 3 bags | 42–52% | 38–52% |
 | headphones (detected as earbuds) | 0/29 | 5/29 (17%) |
-| **keys**, close-up photos | 0/11 | **10/11** |
+| **keys**, close-up photos | 0/11 | **9/11** (10/11 at conf 0.15) |
 | **keys**, search frames | 0/40 | 2/40; **8/40 with 2×2 zoomed tiles** (23/40 at conf 0.05) |
 
 Run 2 learned keys: it recognises our own keys up close, which run 1 never did. In search shots the keys are
@@ -193,7 +193,7 @@ Laptop CPU: detector 64 ms/frame (run 2 is the same YOLO11n size), DINOv2 110 ms
 
 ## 7. Limitations and failure cases
 
-- **Keys:** run 1 never boxed keys. Run 2 recognises them up close (10/11) but finds them in only 8 of 40 search
+- **Keys:** run 1 never boxed keys. Run 2 recognises them up close (9/11 at conf 0.25) but finds them in only 8 of 40 search
   frames at the normal threshold: they are tiny at search distance. Next steps: train with our own keys frames
   from a distance (`ml/extract_frames.py`), a larger input size for small objects, or a lower threshold for keys
   inside tiles (17/40 at 0.15, with more false keys boxes for the item check to reject).
