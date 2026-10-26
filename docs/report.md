@@ -132,7 +132,8 @@ and medicine (box, bottle, blister pack) added for it: no item drops more than 1
 are only learned up close (0/13 → 5/13 close-ups, room shots with tiles 3/10 → 1/10) and false wallet boxes rise
 from 2 to 45 of 322 frames; the public medicine-box set did not transfer to our medicine (0/14 close-ups for
 both). So **run 2 stays deployed**: public product photos taught the close-up look, not the small object in a
-room that a search sees.
+room that a search sees. Raising the wallet threshold alone doesn't rescue it: false wallets only fall back to run 2's
+level at 0.75, where our wallets are no longer found in room shots (`ml/eval_class_threshold.py`).
 
 ### 6.3 Camera coach: blur is a hint, not a reason to skip (bottle/cup/bag/phone videos, 367 frames at 5 fps)
 

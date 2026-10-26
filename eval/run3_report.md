@@ -56,3 +56,11 @@ Run 3 learned wallets up close but not in room shots, and it puts a false "walle
 earbuds/headphones and keys are real, but the rule is that the target classes must improve on our own photos.
 Next time: wallet and medicine training photos that look like search shots (objects small, in rooms), not
 product close-ups; or a separate keys+earbuds-only run.
+
+## What-if: a stricter threshold for wallet only (offline, `ml/eval_class_threshold.py`, `eval/class_threshold_wallet.md`)
+
+Every other class stays at 0.25. Raising the wallet threshold removes the false wallets only by also removing the
+real ones: at 0.45, 24/322 false boxes and 1/10 room frames; at 0.65, 10/322 and 1/10; only at 0.75 are false boxes
+back to run 2's 2/322, and then 0/10 room frames (run 2: 3/10). The plain-detection rule with target earbuds says
+ACCEPT at every threshold, but it does not see the tile-search drop on wallets. So run 3 + a strict wallet threshold
+would trade wallets for keys and earbuds; on deadline day, with only 10 wallet room frames, we kept run 2.
