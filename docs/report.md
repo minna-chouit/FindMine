@@ -1,9 +1,8 @@
 # FindMine: helping blind and low-vision people find *their own* things
 
-**OpenCV AI Competition 2026 · technical report** · Team: [TODO names] · Live app: https://54-90-98-230.sslip.io/ ·
-Code: https://github.com/minna-chouit/FindMine · Video: [TODO link]
+**OpenCV AI Competition 2026 · technical report** · Team: Minet Ellah Chouit, Takoua Hidoussi · Live app: https://54-90-98-230.sslip.io/ ·
+Code: https://github.com/minna-chouit/FindMine · Video: https://youtu.be/ghpWFQpnacw
 
-> Draft. Everything marked **[TODO]** is filled in after the user tests (Sunday) and detector run 2.
 > Every number below comes from a script in this repo; the script is named next to it.
 
 ## 1. Problem and users
@@ -23,12 +22,14 @@ FindMine is a phone web app for blind and low-vision users (and the sighted help
 
 ## 2. Architecture
 
-[TODO: insert the final architecture diagram (docs/architecture.png)]
+![FindMine architecture](architecture.png)
+
+![FindMine agent workflow](agent_workflow.png)
 
 | Part | Runs on | What it does |
 |---|---|---|
 | Phone app (PWA) | the phone's browser | camera → 640 px JPEG frames over a WebSocket; speaks, beeps (stereo pan = direction), vibrates, torch; voice commands (Web Speech API) |
-| Vision service | **AWS EC2** [TODO instance type, Graviton/x86], Python 3.12, FastAPI, **OpenCV 5.0.0** | coach → detect → verify → track → guide, per frame |
+| Vision service | **AWS EC2** `c7i-flex.large` (x86), Python 3.12, FastAPI, **OpenCV 5.0.0** | coach → detect → verify → track → guide, per frame |
 | Search agent | same service + **Amazon Bedrock** (Claude Haiku 4.5) | state machine every frame; LLM planner only at decision points |
 | Storage | **S3** (registration photos, face-blurred, + their features) · **DynamoDB** (items, last seen) | no live frame is ever stored |
 | Delivery | Caddy (HTTPS on sslip.io), systemd (restart on crash), `infra/deploy.sh` (one command) | |
@@ -85,11 +86,11 @@ so far, torch, last seen) and must answer with tool calls: `speak`, `set_torch`,
 claim the item is found; only the vision system decides that. Every step (OpenCV observation, decision,
 actions, planner tools and latency) is logged and replayed at `/trace/<session>`.
 
-[TODO: one annotated trace from the user tests showing "move closer" → "is it yours?" → yes → guide → found]
+A real trace from a tester (session `858cd0c0`, Oct 26): 2.4 s candidate, median score 0.45 → "is it yours?" (no answer, back to scan) → 16.3 s second candidate, 0.43 → "is it yours?" → **yes** → guided by beeps and clock direction → **"Got it" at 20.2 s**.
 
 ## 5. AWS deployment
 
-- **Compute:** one EC2 instance [TODO type] running the vision service under systemd (restarts on crash),
+- **Compute:** one EC2 instance `c7i-flex.large` running the vision service under systemd (restarts on crash),
   Caddy for HTTPS. `infra/deploy.sh` turns a fresh instance into the running service in one command
   (packages, pinned Python requirements, models from S3, face model from OpenCV's model zoo, service, HTTPS,
   health check).
@@ -97,7 +98,7 @@ actions, planner tools and latency) is logged and replayed at `/trace/<session>`
 - **DynamoDB:** one row per item (name, class, owner id, consent, last seen).
 - **Bedrock:** the planner; ~1.5 s per call in our traces, a few calls per search at most.
 - **Budget:** Free-plan credits only; training ran on Kaggle, not AWS.
-- [TODO: COOL / Graviton benchmark, or one line saying we did not do it]
+- We did not run the COOL / Graviton benchmark: the service runs on an x86 `c7i-flex.large` instance.
 
 ## 6. Evaluation
 
@@ -168,17 +169,15 @@ is close. The agent's "move closer" step comes straight from this result. (Searc
 
 ### 6.5 User test (blindfolded volunteers) · `eval/test_protocol.md`, `ml/summarize_user_tests.py`
 
-[TODO: n volunteers, 4 rounds each, A = "what kind of object" baseline vs B = FindMine, each item with its
-look-alike on the table, normal and low light / clutter.]
+We could not run the planned blindfolded A/B study (`eval/test_protocol.md`) in time. Instead, testers used the
+live app on their own phones with eyes closed and filled in a short form after each search: **4 searches by
+3 people** on Oct 26 (1 full app, 3 baseline), all reported "found my item". That is a pilot, too small to compare
+A and B. The 2 people who answered the end questions rated (1–5): guidance 4 and 5, trust in "found" / "is it
+yours?" 5 and 4, easy with eyes closed 3 and 4.
 
-| | A: kind only | B: FindMine |
-|---|---|---|
-| found within 2 min | [TODO] | [TODO] |
-| median time | [TODO] | [TODO] |
-| picked the look-alike | [TODO] | [TODO] |
-
-"Is it yours?" answers during the tests (`ml/answers_from_traces.py`): [TODO precision of *ask* in real use].
-Quotes: [TODO 2–3 short quotes from the form].
+"Is it yours?" answers during all searches on Oct 26, including ours (`ml/answers_from_traces.py`,
+`eval/answers_summary.md`): asked 15 times in 11 searches; 6 yes, 1 no, **8 no answer** (the question times out
+after 10 s). Of the answered asks, 6 of 7 (0.86) were the user's item.
 
 ### 6.6 Privacy check (`server/test_privacy.py`)
 
@@ -189,7 +188,7 @@ Example: `eval/face_blur_example.jpg`.
 ### 6.7 Latency
 
 Laptop CPU: detector 64 ms/frame (run 2 is the same YOLO11n size), DINOv2 110 ms per verified crop (at most 2 per frame).
-[TODO measured on the EC2 instance: frame round trip p50/p95].
+Frame round trip on the EC2 instance was not measured; the live traces show one decision every 0.4–1.3 s.
 
 ## 7. Limitations and failure cases
 
@@ -204,7 +203,7 @@ Laptop CPU: detector 64 ms/frame (run 2 is the same YOLO11n size), DINOv2 110 ms
 - **Data is small:** 10 items, mostly two homes/one school; 75 same-class look-alike rows (18 on search frames).
 - The phone needs a connection; the server is a single instance.
 - `/trace` and `/items` have no login (fine for the demo and judges, not for real users).
-- [TODO: failures seen in the user tests]
+- **Live use:** testers left "is it yours?" unanswered 8 of 15 times (it times out after 10 s), and one full-app search ended in repeated "lens blocked / too dark" coaching although the tester found the item by hand.
 
 ## 8. Responsible use
 
