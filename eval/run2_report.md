@@ -26,7 +26,7 @@ our home videos in eval/detector_compare.md are the fair test).
 Plain detection, conf 0.25 (`ml/compare_detectors.py`, full table in `eval/detector_compare.md`): keys 0/40 for
 both runs; bottles 100% both; cup 82% -> 76%; phone 81% -> 71%; bags -1 frame each; headphones 0% -> 17%.
 
-Keys in detail (run 1 -> run 2): close-up reference photos 0/11 -> **10/11**. Search frames: 0/40 -> 2/40 plain,
+Keys in detail (run 1 -> run 2): close-up reference photos 0/11 -> **9/11** at conf 0.25 (10/11 at 0.15; `ml/eval_tiles.py`). Search frames: 0/40 -> 2/40 plain,
 **23/40 with 2x2 tiles** at conf 0.05. With tiles, keys frames with a keys box: 8/40 at conf 0.25, 17/40 at 0.15;
 non-keys frames with a false keys box: 21/265 at 0.25, 26/265 at 0.15.
 

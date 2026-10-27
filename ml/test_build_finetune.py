@@ -7,7 +7,15 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from build_finetune import build, read_names  # noqa: E402
+from build_finetune import ALIASES, build, norm, read_names  # noqa: E402
+
+assert ALIASES[norm("Pill_Bottle")] == "medicine" and ALIASES[norm(" AirPods-Case ")] == "earbuds"
+# the three run-3 exports (names as in their data.yaml)
+assert [ALIASES.get(norm(n)) for n in ["Wallet", "Calculator", "Ear Device", "EarDevice", "Pen"]] == \
+    ["wallet", None, "earbuds", "earbuds", None]
+assert all(ALIASES.get(norm(n)) == "medicine" for n in [
+    "A-FERIN", "APRANAX", "ARVELES", "BEN-GAY", "BENEXOL B12", "COLDAWAY C", "COLEDAN-D", "DEVIT-3",
+    "DOLOREX", "GAVISCON", "IBURAMINCOLD", "LANSOR", "MAJEZIK", "Parol", "RENNIE", "TYLOLHOT"])
 
 
 def touch(p, text=""):
@@ -57,7 +65,7 @@ print("BUILD FINETUNE TEST PASSED")
 import json  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
-cells = ["".join(c["source"]) for c in json.load(open(ROOT / "ml/kaggle_finetune_run2.ipynb", encoding="utf-8"))["cells"]]
+cells = ["".join(c["source"]) for c in json.load(open(ROOT / "ml/kaggle_finetune_run3.ipynb", encoding="utf-8"))["cells"]]
 for script in ("build_finetune.py", "train_detector.py"):
     embedded = next(c for c in cells if c.startswith(f"%%writefile {script}\n"))
     assert embedded.split("\n", 1)[1] == (ROOT / "ml" / script).read_text(encoding="utf-8"), \

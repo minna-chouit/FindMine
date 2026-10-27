@@ -1,5 +1,6 @@
-"""Build the run-2 fine-tune dataset: extra YOLO exports (keys from Roboflow Universe + our own labelled
-frames) on top of a replay sample of the run-1 data, so the detector learns keys without forgetting cups.
+"""Build a fine-tune dataset: extra YOLO exports (Roboflow Universe sets for weak classes: keys in run 2,
+wallet/earbuds/medicine in run 3) on top of a replay sample of the run-1 data, so the detector learns them
+without forgetting cups.
 
     python ml/build_finetune.py --root data/findmine --extra EXPORT_DIR [EXPORT_DIR ...] [--replay 6000]
 
@@ -21,12 +22,25 @@ CLASSES = ["keys", "wallet", "phone", "glasses", "sunglasses", "remote",
            "earbuds", "medicine", "cup", "bottle", "bag", "watch"]
 WEAK = {0, 1, 6, 7}
 # Names used by public datasets -> our class. Anything else in an export is dropped.
-ALIASES = {"key": "keys", "keys": "keys", "car key": "keys", "car-key": "keys", "house key": "keys",
+# Matched after norm(): lower case, "_" and "-" read as spaces.
+ALIASES = {"key": "keys", "keys": "keys", "car key": "keys", "house key": "keys",
            "keychain": "keys", "key chain": "keys", "bunch of keys": "keys",
-           "wallet": "wallet", "purse": "wallet",
-           "earbuds": "earbuds", "earbud": "earbuds", "airpods": "earbuds", "earphones": "earbuds",
-           "medicine": "medicine", "pill bottle": "medicine", "pills": "medicine"}
+           "wallet": "wallet", "wallets": "wallet", "purse": "wallet", "card holder": "wallet",
+           "earbuds": "earbuds", "earbud": "earbuds", "airpods": "earbuds", "airpod": "earbuds",
+           "earphones": "earbuds", "earphone": "earbuds", "airpods case": "earbuds", "earbuds case": "earbuds",
+           "medicine": "medicine", "medicines": "medicine", "medication": "medicine", "pill bottle": "medicine",
+           "pills": "medicine", "pill": "medicine", "medicine box": "medicine", "medicine bottle": "medicine",
+           "blister pack": "medicine", "blister": "medicine",
+           "ear device": "earbuds", "eardevice": "earbuds"}   # aquamanj/pen-calculator-earbuds
+# teknofest-r4zmp/medicine-d7ttn labels each medicine box by brand: all of them are our "medicine"
+ALIASES.update({b: "medicine" for b in (
+    "a ferin", "apranax", "arveles", "ben gay", "benexol b12", "coldaway c", "coledan d", "devit 3",
+    "dolorex", "gaviscon", "iburamincold", "lansor", "majezik", "parol", "rennie", "tylolhot")})
 IMG = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
+
+
+def norm(name):
+    return " ".join(name.lower().replace("_", " ").replace("-", " ").split())
 
 
 def read_names(data_yaml):
@@ -61,10 +75,11 @@ def import_export(export, root, k, seed=0):
     """Copy one export into root as extra_<k>. -> (train paths, val paths) relative to root."""
     export = Path(export)
     names = read_names(export / "data.yaml")
-    id_map = {i: CLASSES.index(ALIASES[n.lower()]) for i, n in enumerate(names) if n.lower() in ALIASES}
+    id_map = {i: CLASSES.index(ALIASES[norm(n)]) for i, n in enumerate(names) if norm(n) in ALIASES}
     if not id_map:
         raise SystemExit(f"{export}: none of its classes {names} map to ours; add them to ALIASES")
-    print(f"{export.name}: {names} -> {[CLASSES[c] for c in sorted(set(id_map.values()))]}")
+    print(f"{export.name}: " + ", ".join(f"{n} -> {CLASSES[id_map[i]]}" for i, n in id_map.items())
+          + f" | dropped: {[n for i, n in enumerate(names) if i not in id_map] or 'none'}")
     splits = {"train": [], "val": []}
     for split, dest in (("train", "train"), ("valid", "val"), ("val", "val"), ("test", "val")):
         for img in sorted((export / split / "images").glob("*")) if (export / split / "images").is_dir() else []:

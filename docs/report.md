@@ -1,9 +1,8 @@
 # FindMine: helping blind and low-vision people find *their own* things
 
-**OpenCV AI Competition 2026 · technical report** · Team: [TODO names] · Live app: https://54-90-98-230.sslip.io/ ·
-Code: https://github.com/minna-chouit/FindMine · Video: [TODO link]
+**OpenCV AI Competition 2026 · technical report** · Team: Minet Ellah Chouit, Takoua Hidoussi · Live app: https://54-90-98-230.sslip.io/ ·
+Code: https://github.com/minna-chouit/FindMine · Video: https://youtu.be/ghpWFQpnacw
 
-> Draft. Everything marked **[TODO]** is filled in after the user tests (Sunday) and detector run 2.
 > Every number below comes from a script in this repo; the script is named next to it.
 
 ## 1. Problem and users
@@ -62,6 +61,10 @@ export. Pipeline per frame (`server/main.py`):
   run-1 image of a weak class, and 6,000 run-1 images replayed so it doesn't forget. val mAP@50 0.268 → **0.321**;
   keys AP@50 0.004 → 0.751 (optimistic: those val images come from the same keys dataset).
   `ml/kaggle_finetune_run2.ipynb`, `docs/finetune_keys.md`.
+- Detector run 3, trained Oct 25–26, **not deployed** (`eval/run3_report.md`): fine-tuned from run 2 with
+  public wallet, earbuds and medicine-box sets (Roboflow Universe) plus the keys set, same recipe. val mAP@50
+  0.317 → **0.413**; wallet AP@50 0.168 → 0.869, earbuds 0.051 → 0.406, medicine 0.058 → 0.135, keys 0.677 → 0.778
+  (optimistic again: val images come from the training sources). `ml/kaggle_finetune_run3.ipynb`, `docs/finetune_run3.md`.
 - Verifier: DINOv2-small in cv.dnn (cosine to PyTorch ≥ 0.9993, 110 ms/crop on a laptop; needs an export
   wrapper, see `docs/spikes.md`). Fusion weights fitted with `cv.ml` on our own photos: bias −1.81,
   embedding 1.73, geometry 0.57, colour 1.02.
@@ -86,7 +89,7 @@ so far, torch, last seen) and must answer with tool calls: `speak`, `set_torch`,
 claim the item is found; only the vision system decides that. Every step (OpenCV observation, decision,
 actions, planner tools and latency) is logged and replayed at `/trace/<session>`.
 
-[TODO: one annotated trace from the user tests showing "move closer" → "is it yours?" → yes → guide → found]
+A real trace from a tester (session `858cd0c0`, Oct 26): 2.4 s candidate, median score 0.45 → "is it yours?" (no answer, back to scan) → 16.3 s second candidate, 0.43 → "is it yours?" → **yes** → guided by beeps and clock direction → **"Got it" at 20.2 s**.
 
 ## 5. AWS deployment
 
@@ -105,7 +108,7 @@ actions, planner tools and latency) is logged and replayed at `/trace/<session>`
   DynamoDB row and cache; a phone can't delete another phone's items (`server/test_delete.py`).
 - **Permissions:** an IAM role on the instance (S3, DynamoDB, Bedrock); no access keys on the server.
 - **Budget:** Free-plan credits only; training ran on Kaggle, not AWS.
-- [TODO: COOL / Graviton benchmark, or one line saying we did not do it]
+- We did not run the COOL / Graviton benchmark: the service runs on an x86 `c7i-flex.large` instance.
 
 ## 6. Evaluation
 
@@ -113,7 +116,8 @@ actions, planner tools and latency) is logged and replayed at `/trace/<session>`
 
 **FindMine-Home** (`data/home`): our own photos and videos of 10 personal items in 6 classes (3 bags,
 2 bottles, 2 sets of keys, cup, phone, headphones): 5 reference photos per item, test photos and videos in rooms,
-with look-alikes. Public data: COCO 2017, LVIS v1 (detector), Roboflow Universe keys (run 2, CC BY 4.0).
+with look-alikes. Public data: COCO 2017, LVIS v1 (detector), Roboflow Universe keys (run 2), wallet, earbuds and medicine
+boxes (run 3).
 
 ### 6.2 Detection on our own videos (`ml/compare_detectors.py`, conf 0.25, 2 fps; never used for training)
 
@@ -124,7 +128,7 @@ with look-alikes. Public data: COCO 2017, LVIS v1 (detector), Roboflow Universe 
 | phone | 17/21 (81%) | 15/21 (71%) |
 | 3 bags | 42–52% | 38–52% |
 | headphones (detected as earbuds) | 0/29 | 5/29 (17%) |
-| **keys**, close-up photos | 0/11 | **10/11** |
+| **keys**, close-up photos | 0/11 | **9/11** (10/11 at conf 0.15) |
 | **keys**, search frames | 0/40 | 2/40; **8/40 with 2×2 zoomed tiles** (23/40 at conf 0.05) |
 
 Run 2 learned keys: it recognises our own keys up close, which run 1 never did. In search shots the keys are
@@ -132,6 +136,15 @@ only a few dozen pixels wide, so they are found mainly by the tile search (the s
 while nothing of the item's class is in view), mostly below the 0.25 threshold. The small drops on cup and phone
 are 1–2 frames each. With run 2 the look-alike checks are unchanged: 0 of 75 same-class look-alikes and 0 of 939
 other-class boxes at or above *found*.
+
+**Run 3** (`eval/run3_report.md`, `eval/detector_compare_run3.md`, `ml/eval_tiles.py`), tested on our own wallets
+and medicine (box, bottle, blister pack) added for it: no item drops more than 10 points; headphones (as earbuds)
+17% → **45%**; keys with tiles 8/40 → **21/40** with fewer false keys boxes (21 → 6 of 292 frames). But wallets
+are only learned up close (0/13 → 5/13 close-ups, room shots with tiles 3/10 → 1/10) and false wallet boxes rise
+from 2 to 45 of 322 frames; the public medicine-box set did not transfer to our medicine (0/14 close-ups for
+both). So **run 2 stays deployed**: public product photos taught the close-up look, not the small object in a
+room that a search sees. Raising the wallet threshold alone doesn't rescue it: false wallets only fall back to run 2's
+level at 0.75, where our wallets are no longer found in room shots (`ml/eval_class_threshold.py`).
 
 ### 6.3 Camera coach: blur is a hint, not a reason to skip (bottle/cup/bag/phone videos, 367 frames at 5 fps)
 
@@ -166,17 +179,15 @@ is close. The agent's "move closer" step comes straight from this result. (Searc
 
 ### 6.5 User test (blindfolded volunteers) · `eval/test_protocol.md`, `ml/summarize_user_tests.py`
 
-[TODO: n volunteers, 4 rounds each, A = "what kind of object" baseline vs B = FindMine, each item with its
-look-alike on the table, normal and low light / clutter.]
+We could not run the planned blindfolded A/B study (`eval/test_protocol.md`) in time. Instead, testers used the
+live app on their own phones with eyes closed and filled in a short form after each search: **4 searches by
+3 people** on Oct 26 (1 full app, 3 baseline), all reported "found my item". That is a pilot, too small to compare
+A and B. The 2 people who answered the end questions rated (1–5): guidance 4 and 5, trust in "found" / "is it
+yours?" 5 and 4, easy with eyes closed 3 and 4.
 
-| | A: kind only | B: FindMine |
-|---|---|---|
-| found within 2 min | [TODO] | [TODO] |
-| median time | [TODO] | [TODO] |
-| picked the look-alike | [TODO] | [TODO] |
-
-"Is it yours?" answers during the tests (`ml/answers_from_traces.py`): [TODO precision of *ask* in real use].
-Quotes: [TODO 2–3 short quotes from the form].
+"Is it yours?" answers during all searches on Oct 26, including ours (`ml/answers_from_traces.py`,
+`eval/answers_summary.md`): asked 15 times in 11 searches; 6 yes, 1 no, **8 no answer** (the question times out
+after 10 s). Of the answered asks, 6 of 7 (0.86) were the user's item.
 
 ### 6.6 Privacy check (`server/test_privacy.py`)
 
@@ -193,7 +204,7 @@ distance (~200 ms); a server in eu-west-3 (Paris) would cut roughly 150 ms. p95 
 
 ## 7. Limitations and failure cases
 
-- **Keys:** run 1 never boxed keys. Run 2 recognises them up close (10/11) but finds them in only 8 of 40 search
+- **Keys:** run 1 never boxed keys. Run 2 recognises them up close (9/11 at conf 0.25) but finds them in only 8 of 40 search
   frames at the normal threshold: they are tiny at search distance. Next steps: train with our own keys frames
   from a distance (`ml/extract_frames.py`), a larger input size for small objects, or a lower threshold for keys
   inside tiles (17/40 at 0.15, with more false keys boxes for the item check to reject).
@@ -204,7 +215,7 @@ distance (~200 ms); a server in eu-west-3 (Paris) would cut roughly 150 ms. p95 
 - **Data is small:** 10 items, mostly two homes/one school; 75 same-class look-alike rows (18 on search frames).
 - The phone needs a connection; the server is a single instance.
 - `/trace` and `/items` have no login (fine for the demo and judges, not for real users).
-- [TODO: failures seen in the user tests]
+- **Live use:** testers left "is it yours?" unanswered 8 of 15 times (it times out after 10 s), and one full-app search ended in repeated "lens blocked / too dark" coaching although the tester found the item by hand.
 
 ## 8. Responsible use
 
@@ -226,10 +237,13 @@ distance (~200 ms); a server in eu-west-3 (Paris) would cut roughly 150 ms. p95 
 
 See `README.md`: `pip install -r requirements.txt` · `infra/deploy.sh` on EC2 · tests: `server/test_*.py` ·
 evaluation: `ml/eval_home.py`, `ml/eval_cross_class.py`, `ml/compare_detectors.py` · training:
-`ml/kaggle_train_run1.ipynb`, `ml/kaggle_finetune_run2.ipynb` (`docs/finetune_keys.md`).
+`ml/kaggle_train_run1.ipynb`, `ml/kaggle_finetune_run2.ipynb` (`docs/finetune_keys.md`),
+`ml/kaggle_finetune_run3.ipynb` (`docs/finetune_run3.md`).
 
 ## Credits
 
 COCO 2017 (annotations CC BY 4.0), LVIS v1 (CC BY 4.0), Roboflow Universe keys dataset by main-m4puh
-(keys-wd8b7, CC BY 4.0), YOLO11 (Ultralytics, AGPL-3.0), DINOv2 (Meta, Apache-2.0), YuNet face detector
+(keys-wd8b7, CC BY 4.0), wallet by senior-project-final-datasets (wallet-nfk4a, Public Domain), earbuds by
+aquamanj (pen-calculator-earbuds-ecdso, CC BY 4.0), medicine boxes by teknofest-r4zmp (medicine-d7ttn, CC BY 4.0),
+YOLO11 (Ultralytics, AGPL-3.0), DINOv2 (Meta, Apache-2.0), YuNet face detector
 (OpenCV model zoo, MIT), OpenCV 5 (Apache-2.0).
